@@ -1,0 +1,2707 @@
+openapi: 3.0.1
+info:
+  title: Agricultural Collectives Federation API
+  description: |
+    Management API for the national federation of agricultural collectives in Madagascar.
+    Covers: collective opening (A), member admission (B), contributions (C),
+    treasury (D), activities (E), attendance (F), and statistics (G).
+  version: 1.0.0
+
+tags:
+  - name: Collectives
+    description: "A - Opening and managing agricultural collectives"
+  - name: Mandates
+    description: "A - Mandates and elections within collectives and the federation"
+  - name: Members
+    description: "B - Member admission, transfer, and resignation"
+  - name: Contributions
+    description: "C - Contribution payments and settings"
+  - name: Treasury
+    description: "D - Accounts and financial situation"
+  - name: Activities
+    description: "E - Collective and federation activities"
+  - name: Attendance
+    description: "F - Attendance sheets and rates"
+  - name: Statistics
+    description: "G - Reports and statistics"
+
+paths:
+
+# A - OPENING A NEW COLLECTIVE
+
+  /collectives:
+    post:
+      tags: [Collectives]
+      summary: Submit a collective opening request
+      operationId: requestCollectiveOpening
+      description: |
+        Submits an opening request to the federation. Business rules checked:
+        - At least 10 members, of which 5 have been in the federation for ≥ 6 months
+        - The 4 specific roles (president, deputy president, treasurer, secretary) must be filled
+        - City and agricultural specialty are required
+        - Formal federation approval is required (see POST /collectives/requests/{requestId}/approve)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollectiveOpeningRequest'
+            example:
+              name: "Mahajanga Cassava Collective"
+              city: "Mahajanga"
+              specialty: "Cassava"
+              members:
+                - memberId: "MBR-010"
+                  role: "president"
+                - memberId: "MBR-011"
+                  role: "deputy_president"
+                - memberId: "MBR-012"
+                  role: "treasurer"
+                - memberId: "MBR-013"
+                  role: "secretary"
+                - memberId: "MBR-014"
+                  role: "confirmed_member"
+                - memberId: "MBR-015"
+                  role: "confirmed_member"
+                - memberId: "MBR-016"
+                  role: "junior_member"
+                - memberId: "MBR-017"
+                  role: "junior_member"
+                - memberId: "MBR-018"
+                  role: "junior_member"
+                - memberId: "MBR-019"
+                  role: "junior_member"
+      responses:
+        '201':
+          description: Request submitted — pending federation approval
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpeningRequestResponse'
+              example:
+                requestId: "REQ-2024-003"
+                status: "pending"
+                submittedAt: "2024-05-10"
+                name: "Mahajanga Cassava Collective"
+                city: "Mahajanga"
+                specialty: "Cassava"
+        '400':
+          $ref: '#/components/responses/BusinessError'
+        '422':
+          description: One or more member IDs not found in the federation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "MEMBER_NOT_FOUND"
+                message: "Member MBR-019 does not exist in the federation"
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /collectives/requests/{requestId}/approve:
+    post:
+      tags: [Collectives]
+      summary: Approve or reject a collective opening request (federation only)
+      operationId: approveCollectiveRequest
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalDecision'
+            examples:
+              approved:
+                summary: Approve the request
+                value:
+                  decision: "approved"
+                  comment: "All conditions are met. Opening authorized."
+              rejected:
+                summary: Reject the request
+                value:
+                  decision: "rejected"
+                  comment: "Only 3 members have more than 6 months seniority. Minimum required: 5."
+      responses:
+        '200':
+          description: Decision recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpeningRequestResponse'
+              example:
+                requestId: "REQ-2024-003"
+                status: "approved"
+                decidedAt: "2024-05-15"
+                comment: "All conditions are met. Opening authorized."
+        '400':
+          $ref: '#/components/responses/BusinessError'
+        '403':
+          description: Restricted to federation leaders
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "ACCESS_DENIED"
+                message: "Only federation leaders can approve or reject opening requests"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Request already processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "REQUEST_ALREADY_PROCESSED"
+                message: "Request REQ-2024-003 was already approved on 2024-05-15"
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+# A - MANDATES & ELECTIONS
+
+  /collectives/{collectiveId}/mandates:
+    get:
+      tags: [Mandates]
+      summary: List mandates of a collective
+      operationId: listCollectiveMandates
+      parameters:
+        - $ref: '#/components/parameters/CollectiveId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: List of mandates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMandates'
+              example:
+                page: 1
+                limit: 20
+                total: 3
+                data:
+                  - mandateId: "MND-COL001-2024"
+                    year: 2024
+                    startDate: "2024-01-01"
+                    endDate: "2024-12-31"
+                    president:
+                      memberId: "MBR-001"
+                      fullName: "RAKOTO Jean"
+                      mandateCount: 1
+                    deputyPresident:
+                      memberId: "MBR-002"
+                      fullName: "RABE Marie"
+                      mandateCount: 2
+                    treasurer:
+                      memberId: "MBR-003"
+                      fullName: "RASOA Pierre"
+                      mandateCount: 1
+                    secretary:
+                      memberId: "MBR-004"
+                      fullName: "RANDRIA Haja"
+                      mandateCount: 1
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Mandates]
+      summary: Record election results for the next mandate
+      operationId: createCollectiveMandate
+      description: |
+        Records end-of-year vote results for the upcoming mandate.
+        Business rules:
+        - Each specific role must be assigned to exactly one member
+        - A member cannot hold the same specific role more than 2 times total
+        - The mandate covers one full calendar year (1 year for collectives, 2 years for the federation)
+      parameters:
+        - $ref: '#/components/parameters/CollectiveId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMandate'
+            example:
+              year: 2025
+              president: "MBR-005"
+              deputyPresident: "MBR-002"
+              treasurer: "MBR-006"
+              secretary: "MBR-007"
+      responses:
+        '201':
+          description: Mandate created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mandate'
+              example:
+                mandateId: "MND-COL001-2025"
+                year: 2025
+                startDate: "2025-01-01"
+                endDate: "2025-12-31"
+                president:
+                  memberId: "MBR-005"
+                  fullName: "ANDRY Pascal"
+                  mandateCount: 1
+                deputyPresident:
+                  memberId: "MBR-002"
+                  fullName: "RABE Marie"
+                  mandateCount: 2
+                treasurer:
+                  memberId: "MBR-006"
+                  fullName: "RANDRIA Haja"
+                  mandateCount: 1
+                secretary:
+                  memberId: "MBR-007"
+                  fullName: "RASOA Lanto"
+                  mandateCount: 1
+        '400':
+          $ref: '#/components/responses/BusinessError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: A mandate already exists for this year
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "MANDATE_ALREADY_EXISTS"
+                message: "A mandate already exists for collective COL-001 for year 2025"
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /federation/mandates:
+    get:
+      tags: [Mandates]
+      summary: List federation mandates
+      operationId: listFederationMandates
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: List of federation mandates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMandates'
+              example:
+                page: 1
+                limit: 20
+                total: 2
+                data:
+                  - mandateId: "MND-FED-2024"
+                    year: 2024
+                    startDate: "2024-01-01"
+                    endDate: "2025-12-31"
+                    president:
+                      memberId: "MBR-001"
+                      fullName: "RAKOTO Jean"
+                      mandateCount: 1
+                    deputyPresident:
+                      memberId: "MBR-050"
+                      fullName: "RABE Sylvie"
+                      mandateCount: 1
+                    treasurer:
+                      memberId: "MBR-060"
+                      fullName: "RASOA Marc"
+                      mandateCount: 1
+                    secretary:
+                      memberId: "MBR-070"
+                      fullName: "ANDRY Fanja"
+                      mandateCount: 1
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Mandates]
+      summary: Record election results for the next federation mandate
+      operationId: createFederationMandate
+      description: |
+        Federation mandates last 2 years instead of 1.
+        The president must be a current or former collective president.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMandate'
+            example:
+              year: 2026
+              president: "MBR-001"
+              deputyPresident: "MBR-052"
+              treasurer: "MBR-061"
+              secretary: "MBR-071"
+      responses:
+        '201':
+          description: Federation mandate created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mandate'
+              example:
+                mandateId: "MND-FED-2026"
+                year: 2026
+                startDate: "2026-01-01"
+                endDate: "2027-12-31"
+                president:
+                  memberId: "MBR-001"
+                  fullName: "RAKOTO Jean"
+                  mandateCount: 2
+                deputyPresident:
+                  memberId: "MBR-052"
+                  fullName: "RABE Sylvie"
+                  mandateCount: 1
+                treasurer:
+                  memberId: "MBR-061"
+                  fullName: "RASOA Marc"
+                  mandateCount: 1
+                secretary:
+                  memberId: "MBR-071"
+                  fullName: "ANDRY Fanja"
+                  mandateCount: 1
+        '400':
+          $ref: '#/components/responses/BusinessError'
+        '403':
+          description: Restricted to federation leaders
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "ACCESS_DENIED"
+                message: "Only federation leaders can record a federation mandate"
+        '409':
+          description: A mandate already exists for this period
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "MANDATE_ALREADY_EXISTS"
+                message: "A federation mandate already exists for year 2026"
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+# B - MEMBER ADMISSION
+
+  /collectives/{collectiveId}/members:
+    get:
+      tags: [Members]
+      summary: List members of a collective
+      operationId: listMembers
+      parameters:
+        - $ref: '#/components/parameters/CollectiveId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - name: role
+          in: query
+          description: Filter by role
+          schema:
+            $ref: '#/components/schemas/RoleEnum'
+        - name: active
+          in: query
+          description: Filter active members only (not resigned)
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: List of members
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMembers'
+              example:
+                page: 1
+                limit: 20
+                total: 45
+                data:
+                  - memberId: "MBR-001"
+                    lastName: "RAKOTO"
+                    firstName: "Jean"
+                    role: "president"
+                    joinDate: "2021-03-15"
+                    active: true
+                  - memberId: "MBR-020"
+                    lastName: "RASOLOFO"
+                    firstName: "Lalaina"
+                    role: "junior_member"
+                    joinDate: "2024-01-10"
+                    active: true
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Members]
+      summary: Admit a new member into a collective
+      operationId: admitMember
+      description: |
+        Admission conditions:
+        - Must be sponsored by a confirmed member with more than 90 days of seniority
+        - All personal information must be provided
+        - A 50,000 MGA membership fee must be paid by mobile money or bank transfer (cash not accepted)
+      parameters:
+        - $ref: '#/components/parameters/CollectiveId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemberAdmission'
+            example:
+              lastName: "RAKOTONDRABE"
+              firstName: "Fanja"
+              birthDate: "1995-08-22"
+              gender: "female"
+              address: "Lot II J 45, Antananarivo 101"
+              occupation: "Farmer"
+              phone: "034 12 345 67"
+              email: "fanja.rakotondrabe@email.mg"
+              sponsorId: "MBR-005"
+              membershipFee:
+                amount: 50000
+                paymentMethod: "mobile_money"
+                reference: "MVola-2024-78945"
+      responses:
+        '201':
+          description: Member successfully admitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberDetail'
+              example:
+                memberId: "MBR-046"
+                lastName: "RAKOTONDRABE"
+                firstName: "Fanja"
+                birthDate: "1995-08-22"
+                gender: "female"
+                address: "Lot II J 45, Antananarivo 101"
+                occupation: "Farmer"
+                phone: "034 12 345 67"
+                email: "fanja.rakotondrabe@email.mg"
+                role: "junior_member"
+                joinDate: "2024-05-10"
+                collectiveId: "COL-001"
+                sponsorId: "MBR-005"
+                active: true
+        '400':
+          $ref: '#/components/responses/BusinessError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /collectives/{collectiveId}/members/{memberId}:
+    get:
+      tags: [Members]
+      summary: Get member details
+      operationId: getMember
+      parameters:
+        - $ref: '#/components/parameters/CollectiveId'
+        - $ref: '#/components/parameters/MemberId'
+      responses:
+        '200':
+          description: Member details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberDetail'
+              example:
+                memberId: "MBR-001"
+                lastName: "RAKOTO"
+                firstName: "Jean"
+                birthDate: "1980-04-12"
+                gender: "male"
+                address: "Rue de la Paix, Antananarivo 101"
+                occupation: "Rice Farmer"
+                phone: "033 11 222 33"
+                email: "jean.rakoto@email.mg"
+                role: "president"
+                joinDate: "2021-03-15"
+                collectiveId: "COL-001"
+                sponsorId: "MBR-000"
+                active: true
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /collectives/{collectiveId}/members/{memberId}/transfer:
+    post:
+      tags: [Members]
+      summary: Transfer a member to another collective
+      operationId: transferMember
+      description: Allows a member to change collective (e.g. after moving to another city).
+      parameters:
+        - $ref: '#/components/parameters/CollectiveId'
+        - $ref: '#/components/parameters/MemberId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemberTransfer'
+            example:
+              newCollectiveId: "COL-005"
+              reason: "Relocated to Fianarantsoa"
+              effectiveDate: "2024-06-01"
+      responses:
+        '200':
+          description: Transfer completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberDetail'
+              example:
+                memberId: "MBR-020"
+                collectiveId: "COL-005"
+                joinDate: "2024-06-01"
+                role: "junior_member"
+                active: true
+        '400':
+          $ref: '#/components/responses/BusinessError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /collectives/{collectiveId}/members/{memberId}/resign:
+    post:
+      tags: [Members]
+      summary: Record a member resignation
+      operationId: resignMember
+      parameters:
+        - $ref: '#/components/parameters/CollectiveId'
+        - $ref: '#/components/parameters/MemberId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemberResignation'
+            example:
+              reason: "No longer finds value in the collective's activities"
+              resignationDate: "2024-05-30"
+      responses:
+        '200':
+          description: Resignation recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  memberId:
+                    type: string
+                  message:
+                    type: string
+                  resignationDate:
+                    type: string
+                    format: date
+              example:
+                memberId: "MBR-020"
+                message: "Resignation of member MBR-020 has been recorded."
+                resignationDate: "2024-05-30"
+        '400':
+          $ref: '#/components/responses/BusinessError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+# C - CONTRIBUTIONS & PAYMENTS
+
+  /collectives/{collectiveId}/contributions:
+    get:
+      tags: [Contributions]
+      summary: List contributions of a collective
+      operationId: listContributions
+      parameters:
+        - $ref: '#/components/parameters/CollectiveId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/ContributionTypeEnum'
+        - name: memberId
+          in: query
+          description: Filter by member
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of contributions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedContributions'
+              example:
+                page: 1
+                limit: 20
+                total: 120
+                data:
+                  - contributionId: "CTB-2024-0045"
+                    memberId: "MBR-001"
+                    memberFullName: "RAKOTO Jean"
+                    type: "monthly"
+                    amount: 10000
+                    collectionDate: "2024-05-05"
+                    paymentMethod: "mobile_money"
+                    reference: "MVola-2024-11234"
+                    federationShare: true
+                    federationAmount: 1000
+                  - contributionId: "CTB-2024-0046"
+                    memberId: "MBR-002"
+                    memberFullName: "RABE Marie"
+                    type: "one_time"
+                    amount: 25000
+                    purpose: "Funding for May 2024 field trip"
+                    collectionDate: "2024-05-06"
+                    paymentMethod: "cash"
+                    federationShare: false
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Contributions]
+      summary: Record a contribution payment
+      operationId: recordContribution
+      description: |
+        Only the collective treasurer can record a contribution.
+        Periodic contributions (monthly/annual) automatically trigger a percentage
+        transfer to the federation based on configured settings.
+      parameters:
+        - $ref: '#/components/parameters/CollectiveId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContributionRecord'
+            examples:
+              monthly:
+                summary: Monthly contribution
+                value:
+                  memberId: "MBR-005"
+                  type: "monthly"
+                  amount: 10000
+                  collectionDate: "2024-05-05"
+                  paymentMethod: "mobile_money"
+                  reference: "MVola-2024-55678"
+              one_time:
+                summary: One-time contribution for a specific event
+                value:
+                  memberId: "MBR-010"
+                  type: "one_time"
+                  amount: 30000
+                  purpose: "Emergency seed purchase funding"
+                  collectionDate: "2024-05-10"
+                  paymentMethod: "bank_transfer"
+                  reference: "VIR-BOA-2024-9900"
+      responses:
+        '201':
+          description: Contribution recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contribution'
+              example:
+                contributionId: "CTB-2024-0050"
+                memberId: "MBR-005"
+                type: "monthly"
+                amount: 10000
+                collectionDate: "2024-05-05"
+                paymentMethod: "mobile_money"
+                federationShare: true
+                federationAmount: 1000
+        '400':
+          $ref: '#/components/responses/BusinessError'
+        '403':
+          description: Restricted to the collective treasurer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "ACCESS_DENIED"
+                message: "Only the collective treasurer can record contributions"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /collectives/{collectiveId}/contributions/settings:
+    get:
+      tags: [Contributions]
+      summary: Get contribution settings
+      operationId: getContributionSettings
+      parameters:
+        - $ref: '#/components/parameters/CollectiveId'
+      responses:
+        '200':
+          description: Contribution settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContributionSettings'
+              example:
+                collectiveId: "COL-001"
+                monthlyAmount: 10000
+                annualAmount: 100000
+                federationSharePercentage: 10
+                acceptedPaymentMethods:
+                  - cash
+                  - mobile_money
+                  - bank_transfer
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      tags: [Contributions]
+      summary: Update contribution settings
+      operationId: updateContributionSettings
+      parameters:
+        - $ref: '#/components/parameters/CollectiveId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContributionSettingsUpdate'
+            example:
+              monthlyAmount: 12000
+              annualAmount: 120000
+              federationSharePercentage: 10
+              acceptedPaymentMethods:
+                - cash
+                - mobile_money
+                - bank_transfer
+      responses:
+        '200':
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContributionSettings'
+              example:
+                collectiveId: "COL-001"
+                monthlyAmount: 12000
+                annualAmount: 120000
+                federationSharePercentage: 10
+                acceptedPaymentMethods:
+                  - cash
+                  - mobile_money
+                  - bank_transfer
+        '400':
+          $ref: '#/components/responses/BusinessError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+# D - TREASURY
+
+  /collectives/{collectiveId}/treasury/accounts:
+    get:
+      tags: [Treasury]
+      summary: List accounts of a collective
+      operationId: listCollectiveAccounts
+      parameters:
+        - $ref: '#/components/parameters/CollectiveId'
+      responses:
+        '200':
+          description: List of accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Account'
+              example:
+                - accountId: "ACC-001"
+                  type: "cash"
+                  balance: 450000
+                  currency: "MGA"
+                  balanceDate: "2024-05-10"
+                - accountId: "ACC-002"
+                  type: "bank"
+                  holderName: "Antananarivo Rice Collective"
+                  bankName: "BOA"
+                  accountNumber: "00005000120000000012345"
+                  balance: 2500000
+                  currency: "MGA"
+                  balanceDate: "2024-05-10"
+                - accountId: "ACC-003"
+                  type: "mobile_money"
+                  holderName: "RAKOTO Jean"
+                  serviceName: "Orange_Money"
+                  phoneNumber: "032 11 111 11"
+                  balance: 180000
+                  currency: "MGA"
+                  balanceDate: "2024-05-10"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Treasury]
+      summary: Add an account to a collective
+      operationId: addCollectiveAccount
+      description: |
+        Business rules:
+        - A collective can have only one cash account
+        - Multiple bank accounts and mobile money accounts are allowed
+        - Bank account number must follow the format BBBBBGGGGGCCCCCCCCCCCKK (23 digits total)
+      parameters:
+        - $ref: '#/components/parameters/CollectiveId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAccount'
+            examples:
+              cash:
+                summary: Add a cash account
+                value:
+                  type: "cash"
+              bank:
+                summary: Add a bank account
+                value:
+                  type: "bank"
+                  holderName: "Antananarivo Rice Collective"
+                  bankName: "BOA"
+                  bankCode: "00005"
+                  branchCode: "00012"
+                  accountNumber: "00000000123"
+                  ribKey: "45"
+              mobile_money:
+                summary: Add a mobile money account
+                value:
+                  type: "mobile_money"
+                  holderName: "RABE Marie"
+                  serviceName: "MVola"
+                  phoneNumber: "034 56 789 01"
+      responses:
+        '201':
+          description: Account added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+              example:
+                accountId: "ACC-004"
+                type: "bank"
+                holderName: "Antananarivo Rice Collective"
+                bankName: "BOA"
+                accountNumber: "00005000120000000012345"
+                balance: 0
+                currency: "MGA"
+                balanceDate: "2024-05-10"
+        '400':
+          $ref: '#/components/responses/BusinessError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: A cash account already exists for this collective
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "CASH_ACCOUNT_EXISTS"
+                message: "Collective COL-001 already has a cash account (ACC-001)"
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /collectives/{collectiveId}/treasury/accounts/{accountId}/balance:
+    get:
+      tags: [Treasury]
+      summary: Get account balance at a given date
+      operationId: getCollectiveAccountBalance
+      parameters:
+        - $ref: '#/components/parameters/CollectiveId'
+        - $ref: '#/components/parameters/AccountId'
+        - name: date
+          in: query
+          description: Date at which to check the balance (defaults to today)
+          schema:
+            type: string
+            format: date
+            example: "2024-05-10"
+      responses:
+        '200':
+          description: Account balance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountBalance'
+              example:
+                accountId: "ACC-002"
+                type: "bank"
+                bankName: "BOA"
+                date: "2024-05-10"
+                balance: 2500000
+                currency: "MGA"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /federation/treasury/accounts:
+    get:
+      tags: [Treasury]
+      summary: List federation accounts
+      operationId: listFederationAccounts
+      responses:
+        '200':
+          description: List of federation accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Account'
+              example:
+                - accountId: "FED-ACC-001"
+                  type: "cash"
+                  balance: 750000
+                  currency: "MGA"
+                  balanceDate: "2024-05-10"
+                - accountId: "FED-ACC-002"
+                  type: "bank"
+                  holderName: "Agricultural Federation Madagascar"
+                  bankName: "BMOI"
+                  accountNumber: "00010000340000000098765"
+                  balance: 12500000
+                  currency: "MGA"
+                  balanceDate: "2024-05-10"
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Treasury]
+      summary: Add an account to the federation
+      operationId: addFederationAccount
+      description: Same rules as collectives — only one cash account allowed; multiple bank and mobile money accounts permitted.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAccount'
+            example:
+              type: "bank"
+              holderName: "Agricultural Federation Madagascar"
+              bankName: "BMOI"
+              bankCode: "00010"
+              branchCode: "00034"
+              accountNumber: "00000000987"
+              ribKey: "65"
+      responses:
+        '201':
+          description: Account added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+              example:
+                accountId: "FED-ACC-003"
+                type: "bank"
+                holderName: "Agricultural Federation Madagascar"
+                bankName: "BMOI"
+                accountNumber: "00010000340000000098765"
+                balance: 0
+                currency: "MGA"
+                balanceDate: "2024-05-10"
+        '400':
+          $ref: '#/components/responses/BusinessError'
+        '409':
+          description: A cash account already exists for the federation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "CASH_ACCOUNT_EXISTS"
+                message: "The federation already has a cash account (FED-ACC-001)"
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /federation/treasury/accounts/{accountId}/balance:
+    get:
+      tags: [Treasury]
+      summary: Get federation account balance at a given date
+      operationId: getFederationAccountBalance
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+        - name: date
+          in: query
+          description: Date at which to check the balance (defaults to today)
+          schema:
+            type: string
+            format: date
+            example: "2024-05-10"
+      responses:
+        '200':
+          description: Account balance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountBalance'
+              example:
+                accountId: "FED-ACC-002"
+                type: "bank"
+                bankName: "BMOI"
+                date: "2024-05-10"
+                balance: 12500000
+                currency: "MGA"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+# E - ACTIVITIES
+
+  /collectives/{collectiveId}/activities:
+    get:
+      tags: [Activities]
+      summary: List activities of a collective
+      operationId: listCollectiveActivities
+      parameters:
+        - $ref: '#/components/parameters/CollectiveId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/ActivityTypeEnum'
+      responses:
+        '200':
+          description: List of activities
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedActivities'
+              example:
+                page: 1
+                limit: 20
+                total: 8
+                data:
+                  - activityId: "ACT-COL001-2024-05"
+                    type: "monthly_meeting"
+                    title: "Monthly General Meeting - May 2024"
+                    date: "2024-05-12"
+                    mandatory: true
+                    targetAudience: "all"
+                    status: "scheduled"
+                  - activityId: "ACT-COL001-2024-06"
+                    type: "junior_training"
+                    title: "Junior Training - May 2024"
+                    date: "2024-05-25"
+                    mandatory: true
+                    targetAudience: "junior_member"
+                    status: "scheduled"
+                  - activityId: "ACT-COL001-2024-07"
+                    type: "exceptional"
+                    title: "Composting Techniques Workshop"
+                    date: "2024-05-18"
+                    mandatory: false
+                    targetAudience: "all"
+                    status: "scheduled"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Activities]
+      summary: Schedule an exceptional activity for a collective
+      operationId: scheduleCollectiveActivity
+      description: |
+        Mandatory recurring activities (monthly general meeting and junior training) are
+        auto-generated from annual settings. This endpoint creates exceptional activities only.
+        The collective defines whether attendance is mandatory and who it targets.
+      parameters:
+        - $ref: '#/components/parameters/CollectiveId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCollectiveActivity'
+            examples:
+              open_to_all:
+                summary: Exceptional activity open to all members
+                value:
+                  title: "Composting Techniques Workshop"
+                  description: "Hands-on training on natural compost production"
+                  date: "2024-06-15"
+                  location: "Antananarivo Community Hall"
+                  mandatory: false
+                  targetAudience: "all"
+              juniors_only:
+                summary: Exceptional activity for junior members only
+                value:
+                  title: "Introduction to Irrigated Rice Farming"
+                  description: "Workshop for junior members specializing in rice cultivation"
+                  date: "2024-06-22"
+                  location: "COL-001 Experimental Plot"
+                  mandatory: true
+                  targetAudience: "junior_member"
+      responses:
+        '201':
+          description: Activity scheduled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Activity'
+              example:
+                activityId: "ACT-COL001-2024-08"
+                type: "exceptional"
+                title: "Composting Techniques Workshop"
+                date: "2024-06-15"
+                location: "Antananarivo Community Hall"
+                mandatory: false
+                targetAudience: "all"
+                status: "scheduled"
+        '400':
+          $ref: '#/components/responses/BusinessError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /collectives/{collectiveId}/activities/settings:
+    get:
+      tags: [Activities]
+      summary: Get recurring activity schedule settings
+      operationId: getActivitySettings
+      parameters:
+        - $ref: '#/components/parameters/CollectiveId'
+      responses:
+        '200':
+          description: Recurring activity settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivitySettings'
+              example:
+                collectiveId: "COL-001"
+                year: 2024
+                monthlyMeeting:
+                  weekday: "sunday"
+                  weekOfMonth: 2
+                juniorTraining:
+                  weekday: "saturday"
+                  weekOfMonth: 4
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      tags: [Activities]
+      summary: Update recurring activity schedule settings
+      operationId: updateActivitySettings
+      parameters:
+        - $ref: '#/components/parameters/CollectiveId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivitySettingsUpdate'
+            example:
+              year: 2025
+              monthlyMeeting:
+                weekday: "sunday"
+                weekOfMonth: 2
+              juniorTraining:
+                weekday: "saturday"
+                weekOfMonth: 4
+      responses:
+        '200':
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivitySettings'
+              example:
+                collectiveId: "COL-001"
+                year: 2025
+                monthlyMeeting:
+                  weekday: "sunday"
+                  weekOfMonth: 2
+                juniorTraining:
+                  weekday: "saturday"
+                  weekOfMonth: 4
+        '400':
+          $ref: '#/components/responses/BusinessError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /federation/activities:
+    get:
+      tags: [Activities]
+      summary: List federation-level activities
+      operationId: listFederationActivities
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+      responses:
+        '200':
+          description: List of federation activities
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedActivities'
+              example:
+                page: 1
+                limit: 20
+                total: 2
+                data:
+                  - activityId: "FED-ACT-2024-01"
+                    type: "annual_general_meeting"
+                    title: "Annual General Meeting 2024"
+                    date: "2024-12-07"
+                    location: "Congress Palace, Antananarivo"
+                    mandatory: true
+                    targetAudience: "all_collectives"
+                    status: "scheduled"
+                  - activityId: "FED-ACT-2024-02"
+                    type: "exceptional"
+                    title: "Export Seminar - Valorising Agricultural Products"
+                    date: "2024-09-14"
+                    location: "Carlton Hotel, Antananarivo"
+                    mandatory: false
+                    targetAudience: "all_collectives"
+                    status: "scheduled"
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Activities]
+      summary: Schedule a federation-level activity
+      operationId: scheduleFederationActivity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFederationActivity'
+            example:
+              type: "exceptional"
+              title: "Export Seminar - Valorising Agricultural Products"
+              description: "Seminar bringing together all collective presidents and export partners"
+              date: "2024-09-14"
+              location: "Carlton Hotel, Antananarivo"
+              mandatory: false
+              invitedCollectives: "all"
+      responses:
+        '201':
+          description: Activity scheduled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Activity'
+              example:
+                activityId: "FED-ACT-2024-02"
+                type: "exceptional"
+                title: "Export Seminar - Valorising Agricultural Products"
+                date: "2024-09-14"
+                location: "Carlton Hotel, Antananarivo"
+                mandatory: false
+                targetAudience: "all_collectives"
+                status: "scheduled"
+        '400':
+          $ref: '#/components/responses/BusinessError'
+        '403':
+          description: Restricted to federation leaders
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "ACCESS_DENIED"
+                message: "Only federation leaders can schedule federation-level activities"
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+# F - ATTENDANCE
+
+  /collectives/{collectiveId}/activities/{activityId}/attendance:
+    get:
+      tags: [Attendance]
+      summary: Get the attendance sheet for an activity
+      operationId: getAttendanceSheet
+      parameters:
+        - $ref: '#/components/parameters/CollectiveId'
+        - $ref: '#/components/parameters/ActivityId'
+      responses:
+        '200':
+          description: Attendance sheet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttendanceSheet'
+              example:
+                activityId: "ACT-COL001-2024-05"
+                title: "Monthly General Meeting - May 2024"
+                date: "2024-05-12"
+                collectiveId: "COL-001"
+                records:
+                  - memberId: "MBR-001"
+                    fullName: "RAKOTO Jean"
+                    homeCollectiveId: "COL-001"
+                    status: "present"
+                    isVisitor: false
+                  - memberId: "MBR-003"
+                    fullName: "RASOA Pierre"
+                    homeCollectiveId: "COL-001"
+                    status: "excused"
+                    absenceReason: "Professional travel"
+                    isVisitor: false
+                  - memberId: "MBR-025"
+                    fullName: "ANDRY Lanto"
+                    homeCollectiveId: "COL-003"
+                    status: "present"
+                    isVisitor: true
+                  - memberId: "MBR-010"
+                    fullName: "RAZAFY Haja"
+                    homeCollectiveId: "COL-001"
+                    status: "absent"
+                    isVisitor: false
+                summary:
+                  totalMembers: 45
+                  present: 38
+                  excused: 4
+                  absent: 3
+                  visitors: 1
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Attendance]
+      summary: Record attendance for an activity
+      operationId: recordAttendance
+      description: |
+        Only the collective secretary can record attendance.
+        - Visitor members (from other collectives) are recorded but their presence does NOT count
+          toward their home collective attendance rate.
+        - A member can be marked as excused if they notified the secretary in advance.
+      parameters:
+        - $ref: '#/components/parameters/CollectiveId'
+        - $ref: '#/components/parameters/ActivityId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttendanceInput'
+            example:
+              records:
+                - memberId: "MBR-001"
+                  status: "present"
+                - memberId: "MBR-002"
+                  status: "present"
+                - memberId: "MBR-003"
+                  status: "excused"
+                  absenceReason: "Professional travel"
+                - memberId: "MBR-010"
+                  status: "absent"
+                - memberId: "MBR-025"
+                  status: "present"
+                  isVisitor: true
+                  homeCollectiveId: "COL-003"
+      responses:
+        '201':
+          description: Attendance recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttendanceSheet'
+              example:
+                activityId: "ACT-COL001-2024-05"
+                title: "Monthly General Meeting - May 2024"
+                date: "2024-05-12"
+                collectiveId: "COL-001"
+                summary:
+                  totalMembers: 45
+                  present: 38
+                  excused: 4
+                  absent: 3
+                  visitors: 1
+        '400':
+          $ref: '#/components/responses/BusinessError'
+        '403':
+          description: Restricted to the collective secretary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "ACCESS_DENIED"
+                message: "Only the collective secretary can record attendance"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Attendance already recorded for this activity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "ATTENDANCE_ALREADY_RECORDED"
+                message: "Attendance for activity ACT-COL001-2024-05 has already been recorded"
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /collectives/{collectiveId}/members/{memberId}/attendance-rate:
+    get:
+      tags: [Attendance]
+      summary: Get a member's attendance rate over a period
+      operationId: getMemberAttendanceRate
+      description: |
+        Only counts activities from the member's own collective.
+        Activities attended as a visitor in other collectives are excluded.
+        Activities not targeting the member's role are marked as not applicable.
+      parameters:
+        - $ref: '#/components/parameters/CollectiveId'
+        - $ref: '#/components/parameters/MemberId'
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+      responses:
+        '200':
+          description: Member attendance rate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberAttendanceRate'
+              example:
+                memberId: "MBR-001"
+                fullName: "RAKOTO Jean"
+                collectiveId: "COL-001"
+                period:
+                  from: "2024-01-01"
+                  to: "2024-05-31"
+                applicableActivities: 10
+                present: 8
+                excused: 1
+                absent: 1
+                attendanceRate: 90.0
+                breakdown:
+                  - activityId: "ACT-COL001-2024-01"
+                    title: "Monthly General Meeting - January 2024"
+                    date: "2024-01-14"
+                    status: "present"
+                  - activityId: "ACT-COL001-2024-02"
+                    title: "Junior Training - January 2024"
+                    date: "2024-01-27"
+                    status: "not_applicable"
+        '400':
+          $ref: '#/components/responses/BusinessError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+# G - STATISTICS
+
+  /collectives/{collectiveId}/statistics/monthly-report:
+    get:
+      tags: [Statistics]
+      summary: List monthly reports submitted to the federation
+      operationId: listMonthlyReports
+      parameters:
+        - $ref: '#/components/parameters/CollectiveId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: List of monthly reports
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedReports'
+              example:
+                page: 1
+                limit: 20
+                total: 5
+                data:
+                  - reportId: "RPT-COL001-2024-04"
+                    month: "2024-04"
+                    overallAttendanceRate: 84.5
+                    memberCount: 44
+                    submittedAt: "2024-05-02"
+                    submittedById: "MBR-001"
+                  - reportId: "RPT-COL001-2024-03"
+                    month: "2024-03"
+                    overallAttendanceRate: 87.3
+                    memberCount: 43
+                    submittedAt: "2024-04-03"
+                    submittedById: "MBR-001"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Statistics]
+      summary: Submit a monthly report to the federation
+      operationId: submitMonthlyReport
+      description: |
+        Only the collective president can submit the monthly report.
+        The report contains the overall attendance rate and current member count.
+        Only one report per calendar month is accepted.
+      parameters:
+        - $ref: '#/components/parameters/CollectiveId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MonthlyReportSubmission'
+            example:
+              month: "2024-05"
+              comment: "Good participation this month despite the rainy season."
+      responses:
+        '201':
+          description: Report submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonthlyReport'
+              example:
+                reportId: "RPT-COL001-2024-05"
+                month: "2024-05"
+                overallAttendanceRate: 84.5
+                memberCount: 45
+                submittedAt: "2024-06-01"
+                submittedById: "MBR-001"
+                comment: "Good participation this month despite the rainy season."
+        '400':
+          $ref: '#/components/responses/BusinessError'
+        '403':
+          description: Restricted to the collective president
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "ACCESS_DENIED"
+                message: "Only the collective president can submit monthly reports"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Report already submitted for this month
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "REPORT_ALREADY_EXISTS"
+                message: "A report has already been submitted for collective COL-001 for month 2024-05"
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /collectives/{collectiveId}/statistics/members:
+    get:
+      tags: [Statistics]
+      summary: Get detailed statistics per active member
+      operationId: getMemberStatistics
+      description: |
+        Restricted to the collective president.
+        Returns for each active (non-resigned) member:
+        - Attendance rate over the period
+        - Total contributions collected
+        - Potential unpaid amount (expected contributions minus received)
+      parameters:
+        - $ref: '#/components/parameters/CollectiveId'
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+      responses:
+        '200':
+          description: Member statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberStatisticsReport'
+              example:
+                collectiveId: "COL-001"
+                period:
+                  from: "2024-01-01"
+                  to: "2024-05-31"
+                members:
+                  - memberId: "MBR-001"
+                    fullName: "RAKOTO Jean"
+                    role: "president"
+                    attendanceRate: 91.67
+                    totalContributionsCollected: 50000
+                    totalContributionsExpected: 50000
+                    unpaidAmount: 0
+                  - memberId: "MBR-020"
+                    fullName: "RASOLOFO Lalaina"
+                    role: "junior_member"
+                    attendanceRate: 60.0
+                    totalContributionsCollected: 30000
+                    totalContributionsExpected: 50000
+                    unpaidAmount: 20000
+        '400':
+          $ref: '#/components/responses/BusinessError'
+        '403':
+          description: Restricted to the collective president
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "ACCESS_DENIED"
+                message: "Only the collective president can view detailed member statistics"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /collectives/{collectiveId}/statistics/attendance-rate:
+    get:
+      tags: [Statistics]
+      summary: Get the overall attendance rate of a collective
+      operationId: getOverallAttendanceRate
+      parameters:
+        - $ref: '#/components/parameters/CollectiveId'
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+      responses:
+        '200':
+          description: Overall attendance rate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OverallAttendanceRate'
+              example:
+                collectiveId: "COL-001"
+                period:
+                  from: "2024-01-01"
+                  to: "2024-05-31"
+                activeMembers: 45
+                mandatoryActivitiesCount: 12
+                overallAttendanceRate: 84.5
+                rateByType:
+                  monthly_meeting: 88.2
+                  junior_training: 76.4
+        '400':
+          $ref: '#/components/responses/BusinessError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+# COMPONENTS
+components:
+
+  parameters:
+    CollectiveId:
+      name: collectiveId
+      in: path
+      required: true
+      description: Unique collective identifier
+      schema:
+        type: string
+        example: "COL-001"
+
+    MemberId:
+      name: memberId
+      in: path
+      required: true
+      description: Unique member identifier
+      schema:
+        type: string
+        example: "MBR-001"
+
+    ActivityId:
+      name: activityId
+      in: path
+      required: true
+      description: Unique activity identifier
+      schema:
+        type: string
+        example: "ACT-COL001-2024-05"
+
+    AccountId:
+      name: accountId
+      in: path
+      required: true
+      description: Unique account identifier
+      schema:
+        type: string
+        example: "ACC-002"
+
+    RequestId:
+      name: requestId
+      in: path
+      required: true
+      description: Unique opening request identifier
+      schema:
+        type: string
+        example: "REQ-2024-003"
+
+    Page:
+      name: page
+      in: query
+      description: Page number
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+
+    Limit:
+      name: limit
+      in: query
+      description: Number of items per page
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+
+    DateFrom:
+      name: dateFrom
+      in: query
+      description: Period start date (inclusive)
+      schema:
+        type: string
+        format: date
+        example: "2024-01-01"
+
+    DateTo:
+      name: dateTo
+      in: query
+      description: Period end date (inclusive)
+      schema:
+        type: string
+        format: date
+        example: "2024-05-31"
+
+  # ─── STANDARD RESPONSES ──────────────────────────────────────
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: "NOT_FOUND"
+            message: "The requested resource does not exist"
+
+    BusinessError:
+      description: Business rule violation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: "BUSINESS_RULE_VIOLATED"
+            message: "Sponsor MBR-010 is not a confirmed member or has less than 90 days of seniority"
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: "INTERNAL_ERROR"
+            message: "An unexpected error occurred. Please try again."
+
+  # ─── SCHEMAS ─────────────────────────────────────────────────
+  schemas:
+
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code
+          example: "BUSINESS_RULE_VIOLATED"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Sponsor does not meet the required seniority"
+
+    # ── Enumerations ──
+
+    RoleEnum:
+      type: string
+      enum:
+        - president
+        - deputy_president
+        - treasurer
+        - secretary
+        - confirmed_member
+        - junior_member
+
+    GenderEnum:
+      type: string
+      enum: [male, female]
+
+    PaymentMethodEnum:
+      type: string
+      enum: [cash, mobile_money, bank_transfer]
+
+    AccountTypeEnum:
+      type: string
+      enum: [cash, bank, mobile_money]
+
+    BankNameEnum:
+      type: string
+      enum: [BRED, MCB, BMOI, BOA, BGFI, AFG, ACCES_BANQUE, BAOBAB, SIPEM]
+
+    MobileMoneyServiceEnum:
+      type: string
+      enum: [Orange_Money, MVola, Airtel_Money]
+
+    ContributionTypeEnum:
+      type: string
+      enum: [monthly, annual, one_time]
+
+    ActivityTypeEnum:
+      type: string
+      enum: [monthly_meeting, junior_training, exceptional, annual_general_meeting]
+
+    AttendanceStatusEnum:
+      type: string
+      enum: [present, absent, excused, not_applicable]
+
+    WeekdayEnum:
+      type: string
+      enum: [monday, tuesday, wednesday, thursday, friday, saturday, sunday]
+
+    # ── Common ──
+
+    Period:
+      type: object
+      properties:
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+
+    MemberRef:
+      type: object
+      properties:
+        memberId:
+          type: string
+        fullName:
+          type: string
+
+    # ── A - Collectives ──
+
+    CollectiveOpeningRequest:
+      type: object
+      required: [name, city, specialty, members]
+      properties:
+        name:
+          type: string
+          description: Unique name of the new collective
+        city:
+          type: string
+        specialty:
+          type: string
+          description: Agricultural specialty of the collective
+        members:
+          type: array
+          description: At least 10 members with their assigned role
+          minItems: 10
+          items:
+            type: object
+            required: [memberId, role]
+            properties:
+              memberId:
+                type: string
+              role:
+                $ref: '#/components/schemas/RoleEnum'
+
+    OpeningRequestResponse:
+      type: object
+      properties:
+        requestId:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        submittedAt:
+          type: string
+          format: date
+        decidedAt:
+          type: string
+          format: date
+        name:
+          type: string
+        city:
+          type: string
+        specialty:
+          type: string
+        comment:
+          type: string
+
+    ApprovalDecision:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [approved, rejected]
+        comment:
+          type: string
+
+    # ── A - Mandates ──
+
+    PaginatedMandates:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Mandate'
+
+    Mandate:
+      type: object
+      properties:
+        mandateId:
+          type: string
+        year:
+          type: integer
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        president:
+          $ref: '#/components/schemas/MandateRole'
+        deputyPresident:
+          $ref: '#/components/schemas/MandateRole'
+        treasurer:
+          $ref: '#/components/schemas/MandateRole'
+        secretary:
+          $ref: '#/components/schemas/MandateRole'
+
+    MandateRole:
+      type: object
+      properties:
+        memberId:
+          type: string
+        fullName:
+          type: string
+        mandateCount:
+          type: integer
+          description: Total number of mandates held in this role (max 2)
+
+    CreateMandate:
+      type: object
+      required: [year, president, deputyPresident, treasurer, secretary]
+      properties:
+        year:
+          type: integer
+          description: Calendar year of the mandate
+        president:
+          type: string
+          description: Member ID of the elected president
+        deputyPresident:
+          type: string
+          description: Member ID of the elected deputy president
+        treasurer:
+          type: string
+          description: Member ID of the elected treasurer
+        secretary:
+          type: string
+          description: Member ID of the elected secretary
+
+    # ── B - Members ──
+
+    PaginatedMembers:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MemberSummary'
+
+    MemberSummary:
+      type: object
+      properties:
+        memberId:
+          type: string
+        lastName:
+          type: string
+        firstName:
+          type: string
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        joinDate:
+          type: string
+          format: date
+        active:
+          type: boolean
+
+    MemberDetail:
+      allOf:
+        - $ref: '#/components/schemas/MemberSummary'
+        - type: object
+          properties:
+            birthDate:
+              type: string
+              format: date
+            gender:
+              $ref: '#/components/schemas/GenderEnum'
+            address:
+              type: string
+            occupation:
+              type: string
+            phone:
+              type: string
+            email:
+              type: string
+              format: email
+            collectiveId:
+              type: string
+            sponsorId:
+              type: string
+
+    MemberAdmission:
+      type: object
+      required: [lastName, firstName, birthDate, gender, address, occupation, phone, email, sponsorId, membershipFee]
+      properties:
+        lastName:
+          type: string
+        firstName:
+          type: string
+        birthDate:
+          type: string
+          format: date
+        gender:
+          $ref: '#/components/schemas/GenderEnum'
+        address:
+          type: string
+        occupation:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+          format: email
+        sponsorId:
+          type: string
+          description: ID of the confirmed member sponsor (must have >90 days seniority)
+        membershipFee:
+          type: object
+          required: [amount, paymentMethod]
+          properties:
+            amount:
+              type: integer
+              description: Must be exactly 50,000 MGA
+              example: 50000
+            paymentMethod:
+              type: string
+              enum: [mobile_money, bank_transfer]
+              description: Cash is not accepted for membership fee
+            reference:
+              type: string
+              description: Transaction reference
+
+    MemberTransfer:
+      type: object
+      required: [newCollectiveId, effectiveDate]
+      properties:
+        newCollectiveId:
+          type: string
+        reason:
+          type: string
+        effectiveDate:
+          type: string
+          format: date
+
+    MemberResignation:
+      type: object
+      required: [resignationDate]
+      properties:
+        reason:
+          type: string
+        resignationDate:
+          type: string
+          format: date
+
+    # ── C - Contributions ──
+
+    PaginatedContributions:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Contribution'
+
+    Contribution:
+      type: object
+      properties:
+        contributionId:
+          type: string
+        memberId:
+          type: string
+        memberFullName:
+          type: string
+        type:
+          $ref: '#/components/schemas/ContributionTypeEnum'
+        amount:
+          type: integer
+          description: Amount in MGA
+        purpose:
+          type: string
+          description: Required for one-time contributions
+        collectionDate:
+          type: string
+          format: date
+        paymentMethod:
+          $ref: '#/components/schemas/PaymentMethodEnum'
+        reference:
+          type: string
+        federationShare:
+          type: boolean
+          description: True if a percentage is forwarded to the federation (periodic only)
+        federationAmount:
+          type: integer
+          description: Amount forwarded to the federation in MGA
+
+    ContributionRecord:
+      type: object
+      required: [memberId, type, amount, collectionDate, paymentMethod]
+      properties:
+        memberId:
+          type: string
+        type:
+          $ref: '#/components/schemas/ContributionTypeEnum'
+        amount:
+          type: integer
+        purpose:
+          type: string
+          description: Required when type is one_time
+        collectionDate:
+          type: string
+          format: date
+        paymentMethod:
+          $ref: '#/components/schemas/PaymentMethodEnum'
+        reference:
+          type: string
+
+    ContributionSettings:
+      type: object
+      properties:
+        collectiveId:
+          type: string
+        monthlyAmount:
+          type: integer
+          description: Monthly contribution amount in MGA
+        annualAmount:
+          type: integer
+          description: Annual contribution amount in MGA
+        federationSharePercentage:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          description: Percentage of periodic contributions forwarded to the federation
+        acceptedPaymentMethods:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentMethodEnum'
+
+    ContributionSettingsUpdate:
+      type: object
+      properties:
+        monthlyAmount:
+          type: integer
+        annualAmount:
+          type: integer
+        federationSharePercentage:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+        acceptedPaymentMethods:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentMethodEnum'
+
+    # ── D - Treasury ──
+
+    Account:
+      type: object
+      properties:
+        accountId:
+          type: string
+        type:
+          $ref: '#/components/schemas/AccountTypeEnum'
+        holderName:
+          type: string
+          description: Present for bank and mobile money accounts
+        bankName:
+          $ref: '#/components/schemas/BankNameEnum'
+        serviceName:
+          $ref: '#/components/schemas/MobileMoneyServiceEnum'
+        accountNumber:
+          type: string
+          description: |
+            Bank account number (23 digits: BBBBBGGGGGCCCCCCCCCCCKK)
+            or phone number for mobile money accounts
+        phoneNumber:
+          type: string
+          description: Phone number for mobile money accounts
+        balance:
+          type: integer
+          description: Balance in MGA
+        currency:
+          type: string
+          default: "MGA"
+        balanceDate:
+          type: string
+          format: date
+
+    CreateAccount:
+      type: object
+      required: [type]
+      properties:
+        type:
+          $ref: '#/components/schemas/AccountTypeEnum'
+        holderName:
+          type: string
+        bankName:
+          $ref: '#/components/schemas/BankNameEnum'
+        bankCode:
+          type: string
+          pattern: '^\d{5}$'
+          description: Bank code (5 digits)
+        branchCode:
+          type: string
+          pattern: '^\d{5}$'
+          description: Branch code (5 digits)
+        accountNumber:
+          type: string
+          pattern: '^\d{11}$'
+          description: Account number (11 digits)
+        ribKey:
+          type: string
+          pattern: '^\d{2}$'
+          description: RIB key (2 digits)
+        serviceName:
+          $ref: '#/components/schemas/MobileMoneyServiceEnum'
+        phoneNumber:
+          type: string
+          description: Phone number for mobile money account
+
+    AccountBalance:
+      type: object
+      properties:
+        accountId:
+          type: string
+        type:
+          $ref: '#/components/schemas/AccountTypeEnum'
+        bankName:
+          type: string
+        date:
+          type: string
+          format: date
+        balance:
+          type: integer
+        currency:
+          type: string
+          default: "MGA"
+
+    # ── E - Activities ──
+
+    PaginatedActivities:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Activity'
+
+    Activity:
+      type: object
+      properties:
+        activityId:
+          type: string
+        type:
+          $ref: '#/components/schemas/ActivityTypeEnum'
+        title:
+          type: string
+        description:
+          type: string
+        date:
+          type: string
+          format: date
+        location:
+          type: string
+        mandatory:
+          type: boolean
+        targetAudience:
+          type: string
+          enum: [all, junior_member, confirmed_member, all_collectives]
+        status:
+          type: string
+          enum: [scheduled, completed, cancelled]
+
+    CreateCollectiveActivity:
+      type: object
+      required: [title, date, mandatory, targetAudience]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        date:
+          type: string
+          format: date
+        location:
+          type: string
+        mandatory:
+          type: boolean
+        targetAudience:
+          type: string
+          enum: [all, junior_member, confirmed_member]
+
+    CreateFederationActivity:
+      type: object
+      required: [type, title, date, mandatory, invitedCollectives]
+      properties:
+        type:
+          $ref: '#/components/schemas/ActivityTypeEnum'
+        title:
+          type: string
+        description:
+          type: string
+        date:
+          type: string
+          format: date
+        location:
+          type: string
+        mandatory:
+          type: boolean
+        invitedCollectives:
+          type: string
+          description: '"all" or a specific collective ID'
+          example: "all"
+
+    ActivitySettings:
+      type: object
+      properties:
+        collectiveId:
+          type: string
+        year:
+          type: integer
+        monthlyMeeting:
+          $ref: '#/components/schemas/RecurrenceRule'
+        juniorTraining:
+          $ref: '#/components/schemas/RecurrenceRule'
+
+    ActivitySettingsUpdate:
+      type: object
+      required: [year, monthlyMeeting, juniorTraining]
+      properties:
+        year:
+          type: integer
+        monthlyMeeting:
+          $ref: '#/components/schemas/RecurrenceRule'
+        juniorTraining:
+          $ref: '#/components/schemas/RecurrenceRule'
+
+    RecurrenceRule:
+      type: object
+      required: [weekday, weekOfMonth]
+      properties:
+        weekday:
+          $ref: '#/components/schemas/WeekdayEnum'
+        weekOfMonth:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: Which occurrence of the weekday in the month (e.g. 2 = 2nd Sunday)
+
+    # ── F - Attendance ──
+
+    AttendanceSheet:
+      type: object
+      properties:
+        activityId:
+          type: string
+        title:
+          type: string
+        date:
+          type: string
+          format: date
+        collectiveId:
+          type: string
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttendanceRecord'
+        summary:
+          $ref: '#/components/schemas/AttendanceSummary'
+
+    AttendanceRecord:
+      type: object
+      properties:
+        memberId:
+          type: string
+        fullName:
+          type: string
+        homeCollectiveId:
+          type: string
+          description: The collective the member belongs to
+        status:
+          $ref: '#/components/schemas/AttendanceStatusEnum'
+        absenceReason:
+          type: string
+          description: Required when status is excused
+        isVisitor:
+          type: boolean
+          description: True if the member belongs to a different collective
+
+    AttendanceSummary:
+      type: object
+      properties:
+        totalMembers:
+          type: integer
+        present:
+          type: integer
+        excused:
+          type: integer
+        absent:
+          type: integer
+        visitors:
+          type: integer
+
+    AttendanceInput:
+      type: object
+      required: [records]
+      properties:
+        records:
+          type: array
+          items:
+            type: object
+            required: [memberId, status]
+            properties:
+              memberId:
+                type: string
+              status:
+                $ref: '#/components/schemas/AttendanceStatusEnum'
+              absenceReason:
+                type: string
+                description: Required when status is excused
+              isVisitor:
+                type: boolean
+                default: false
+              homeCollectiveId:
+                type: string
+                description: Required when isVisitor is true
+
+    MemberAttendanceRate:
+      type: object
+      properties:
+        memberId:
+          type: string
+        fullName:
+          type: string
+        collectiveId:
+          type: string
+        period:
+          $ref: '#/components/schemas/Period'
+        applicableActivities:
+          type: integer
+          description: Activities that targeted this member's role
+        present:
+          type: integer
+        excused:
+          type: integer
+        absent:
+          type: integer
+        attendanceRate:
+          type: number
+          format: float
+          description: "(present + excused) / applicableActivities × 100"
+        breakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              activityId:
+                type: string
+              title:
+                type: string
+              date:
+                type: string
+                format: date
+              status:
+                $ref: '#/components/schemas/AttendanceStatusEnum'
+
+    # ── G - Statistics ──
+
+    PaginatedReports:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonthlyReport'
+
+    MonthlyReport:
+      type: object
+      properties:
+        reportId:
+          type: string
+        month:
+          type: string
+          pattern: '^\d{4}-\d{2}$'
+          description: Month in YYYY-MM format
+          example: "2024-05"
+        overallAttendanceRate:
+          type: number
+          format: float
+        memberCount:
+          type: integer
+        submittedAt:
+          type: string
+          format: date
+        submittedById:
+          type: string
+        comment:
+          type: string
+
+    MonthlyReportSubmission:
+      type: object
+      required: [month]
+      properties:
+        month:
+          type: string
+          pattern: '^\d{4}-\d{2}$'
+          description: Target month in YYYY-MM format
+        comment:
+          type: string
+
+    MemberStatisticsReport:
+      type: object
+      properties:
+        collectiveId:
+          type: string
+        period:
+          $ref: '#/components/schemas/Period'
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/MemberStats'
+
+    MemberStats:
+      type: object
+      properties:
+        memberId:
+          type: string
+        fullName:
+          type: string
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        attendanceRate:
+          type: number
+          format: float
+          description: Percentage
+        totalContributionsCollected:
+          type: integer
+          description: Total amount collected over the period (MGA)
+        totalContributionsExpected:
+          type: integer
+          description: Theoretical amount expected over the period (MGA)
+        unpaidAmount:
+          type: integer
+          description: Difference between expected and collected (MGA)
+
+    OverallAttendanceRate:
+      type: object
+      properties:
+        collectiveId:
+          type: string
+        period:
+          $ref: '#/components/schemas/Period'
+        activeMembers:
+          type: integer
+        mandatoryActivitiesCount:
+          type: integer
+        overallAttendanceRate:
+          type: number
+          format: float
+        rateByType:
+          type: object
+          properties:
+            monthly_meeting:
+              type: number
+              format: float
+            junior_training:
+              type: number
+              format: float
