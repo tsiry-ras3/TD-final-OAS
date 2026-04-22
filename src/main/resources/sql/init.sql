@@ -207,3 +207,139 @@ BEGIN
         (v_member1_id, v_president_id),
         (v_member2_id, v_vice_president_id);
 END $$;
+
+
+-- all enum values
+CREATE TYPE frequency_type AS ENUM (
+    'WEEKLY', 'MONTHLY', 'ANNUALLY', 'PUNCTUALLY'
+);
+
+CREATE TYPE activity_status AS ENUM (
+    'ACTIVE', 'INACTIVE'
+);
+
+CREATE TYPE payment_mode AS ENUM (
+    'CASH', 'MOBILE_BANKING', 'BANK_TRANSFER'
+);
+
+CREATE TYPE account_type AS ENUM (
+    'CASH', 'MOBILE_BANKING', 'BANK'
+);
+
+CREATE TYPE mobile_banking_service AS ENUM (
+    'AIRTEL_MONEY', 'MVOLA', 'ORANGE_MONEY'
+);
+
+CREATE TYPE bank_name AS ENUM (
+    'BRED', 'MCB', 'BMOI', 'BOA', 'BGFI',
+    'AFG', 'ACCES_BAQUE', 'BAOBAB', 'SIPEM'
+);
+
+-- Adding unique constraints to ensure collectivity names and numbers are unique across the federation
+ALTER TABLE collectivities
+    ADD COLUMN name VARCHAR(255) UNIQUE,
+    ADD COLUMN number INT UNIQUE;
+
+-- financial account
+CREATE TABLE financial_accounts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    collectivity_id UUID NOT NULL,
+    account_type account_type NOT NULL,
+    amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+
+    -- Mobile banking
+    holder_name VARCHAR(255),
+    mobile_banking_service mobile_banking_service,
+    mobile_number VARCHAR(20),
+
+    -- Bank
+    bank_name bank_name,
+    bank_code INT,
+    bank_branch_code INT,
+    bank_account_number INT,
+    bank_account_key INT,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT fk_fa_collectivity
+        FOREIGN KEY (collectivity_id)
+        REFERENCES collectivities(id)
+        ON DELETE CASCADE
+);
+
+CREATE TRIGGER trg_financial_accounts_updated_at
+BEFORE UPDATE ON financial_accounts
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- membership fees : depends on collectivity and can be different for each collectivity, but also can be different for each member depending on their occupation and age. For simplicity, we will link it to collectivity and add a label to differentiate the fees (e.g. "Junior fee", "Senior fee", "Occupation fee"). We will also add eligibility criteria based on age and occupation, as well as a frequency to specify how often the fee should be paid.
+CREATE TABLE membership_fees (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    collectivity_id UUID NOT NULL,
+    label VARCHAR(255),
+    eligible_from DATE NOT NULL,
+    frequency frequency_type NOT NULL,
+    amount NUMERIC(12,2) NOT NULL CHECK (amount >= 0),
+    status activity_status NOT NULL DEFAULT 'ACTIVE',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT fk_mf_collectivity
+        FOREIGN KEY (collectivity_id)
+        REFERENCES collectivities(id)
+        ON DELETE CASCADE
+);
+
+CREATE TRIGGER trg_membership_fees_updated_at
+BEFORE UPDATE ON membership_fees
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- members payements
+CREATE TABLE member_payments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    member_id UUID NOT NULL,
+    membership_fee_id UUID NOT NULL,
+    account_credited_id UUID NOT NULL,
+    amount NUMERIC(12,2) NOT NULL,
+    payment_mode payment_mode NOT NULL,
+    creation_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT fk_mp_member
+        FOREIGN KEY (member_id)
+        REFERENCES members(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_mp_membership_fee
+        FOREIGN KEY (membership_fee_id)
+        REFERENCES membership_fees(id),
+
+    CONSTRAINT fk_mp_account
+        FOREIGN KEY (account_credited_id)
+        REFERENCES financial_accounts(id)
+);
+
+-- collectivity transactions
+CREATE TABLE collectivity_transactions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    collectivity_id UUID NOT NULL,
+    member_debited_id UUID NOT NULL,
+    account_credited_id UUID NOT NULL,
+    amount NUMERIC(12,2) NOT NULL,
+    payment_mode payment_mode NOT NULL,
+    creation_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT fk_ct_collectivity
+        FOREIGN KEY (collectivity_id)
+        REFERENCES collectivities(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_ct_member
+        FOREIGN KEY (member_debited_id)
+        REFERENCES members(id),
+
+    CONSTRAINT fk_ct_account
+        FOREIGN KEY (account_credited_id)
+        REFERENCES financial_accounts(id)
+);
