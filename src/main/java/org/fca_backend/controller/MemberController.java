@@ -1,4 +1,4 @@
-package org.fca_backend.controler;
+package org.fca_backend.controller;
 
 import lombok.AllArgsConstructor;
 import org.fca_backend.DTO.CreateMemberDTO;
