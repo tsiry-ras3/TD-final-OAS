@@ -7,7 +7,6 @@ import org.fca_backend.DTO.UpdateCollectivityDTO;
 import org.fca_backend.config.DataSourceConfig;
 import org.fca_backend.entity.*;
 import org.fca_backend.validator.CollectivityValidator;
-import org.fca_backend.validator.MemberValidator;
 import org.springframework.stereotype.Service;
 
 import java.sql.Connection;
@@ -177,9 +176,6 @@ public class CollectivityRepository {
                 if (!rs.next()) {
                     throw new Exception("Collectivity not found with ID: " + collectivityId);
                 }
-
-                String currentUniqueNumber = rs.getString("unique_number");
-                String currentUniqueName = rs.getString("unique_name");
 
                 String updateSql = """
                 UPDATE collectivities 

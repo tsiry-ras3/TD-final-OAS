@@ -1,4 +1,3 @@
-// CreateMemberPaymentDTO.java
 package org.fca_backend.DTO;
 
 import lombok.AllArgsConstructor;
