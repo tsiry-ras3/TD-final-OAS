@@ -6,7 +6,6 @@ import org.fca_backend.DTO.CreateCollectivityStructureDTO;
 import org.fca_backend.config.DataSourceConfig;
 import org.fca_backend.entity.*;
 import org.fca_backend.validator.CollectivityValidator;
-import org.fca_backend.validator.MemberValidator;
 import org.springframework.stereotype.Service;
 
 import java.sql.Connection;
@@ -21,7 +20,6 @@ import java.util.List;
 @Service
 public class CollectivityRepository {
     private CollectivityValidator collectivityValidator;
-    private MemberValidator memberValidator;
     private DataSourceConfig dataSourceConfig;
 
     public List<Collectivity> addNewListOfCollectivity(List<CreateCollectivityDTO> collectivities) {
