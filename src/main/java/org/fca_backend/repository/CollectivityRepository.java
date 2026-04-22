@@ -177,9 +177,6 @@ public class CollectivityRepository {
                     throw new Exception("Collectivity not found with ID: " + collectivityId);
                 }
 
-                String currentUniqueNumber = rs.getString("unique_number");
-                String currentUniqueName = rs.getString("unique_name");
-
                 String updateSql = """
                 UPDATE collectivities 
                 SET location = ?, federation_approval = ?, updated_at = NOW()
