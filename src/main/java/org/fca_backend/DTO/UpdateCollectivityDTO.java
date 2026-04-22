@@ -4,18 +4,15 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import java.time.LocalDate;
 import java.util.List;
 
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
-public class CreateCollectivityDTO {
+public class UpdateCollectivityDTO {
     private String location;
     private List<String> members;
     private Boolean federationApproval;
     private CreateCollectivityStructureDTO structure;
-    private String uniqueNumber;  // Nouveau champ
-    private String uniqueName;     // Nouveau champ
 }

@@ -3,6 +3,7 @@ package org.fca_backend.repository;
 import lombok.AllArgsConstructor;
 import org.fca_backend.DTO.CreateCollectivityDTO;
 import org.fca_backend.DTO.CreateCollectivityStructureDTO;
+import org.fca_backend.DTO.UpdateCollectivityDTO;
 import org.fca_backend.config.DataSourceConfig;
 import org.fca_backend.entity.*;
 import org.fca_backend.validator.CollectivityValidator;
@@ -21,7 +22,6 @@ import java.util.List;
 @Service
 public class CollectivityRepository {
     private CollectivityValidator collectivityValidator;
-    private MemberValidator memberValidator;
     private DataSourceConfig dataSourceConfig;
 
     public List<Collectivity> addNewListOfCollectivity(List<CreateCollectivityDTO> collectivities) {
@@ -164,6 +164,89 @@ public class CollectivityRepository {
             return member;
         } catch (SQLException e) {
             throw new Exception("Database error while fetching member: " + e.getMessage(), e);
+        }
+    }
+    public Collectivity updateCollectivity(String collectivityId, UpdateCollectivityDTO updateDTO) throws Exception {
+        String checkSql = "SELECT unique_number, unique_name FROM collectivities WHERE id = ?::uuid";
+
+        try (Connection conn = dataSourceConfig.dataSource().getConnection()) {
+            try (PreparedStatement psCheck = conn.prepareStatement(checkSql)) {
+                psCheck.setString(1, collectivityId);
+                ResultSet rs = psCheck.executeQuery();
+
+                if (!rs.next()) {
+                    throw new Exception("Collectivity not found with ID: " + collectivityId);
+                }
+
+                String currentUniqueNumber = rs.getString("unique_number");
+                String currentUniqueName = rs.getString("unique_name");
+
+                String updateSql = """
+                UPDATE collectivities 
+                SET location = ?, federation_approval = ?, updated_at = NOW()
+                WHERE id = ?::uuid
+                RETURNING id, location, federation_approval, unique_number, unique_name
+            """;
+
+                try (PreparedStatement psUpdate = conn.prepareStatement(updateSql)) {
+                    psUpdate.setString(1, updateDTO.getLocation());
+                    psUpdate.setBoolean(2, updateDTO.getFederationApproval());
+                    psUpdate.setString(3, collectivityId);
+
+                    ResultSet rsUpdate = psUpdate.executeQuery();
+
+                    if (!rsUpdate.next()) {
+                        throw new SQLException("Failed to update collectivity");
+                    }
+
+                    // Mettre à jour la structure
+                    if (updateDTO.getStructure() != null) {
+                        String structureSql = """
+                        UPDATE collectivity_structure 
+                        SET president_id = ?::uuid, vice_president_id = ?::uuid, 
+                            treasurer_id = ?::uuid, secretary_id = ?::uuid
+                        WHERE collectivity_id = ?::uuid
+                    """;
+
+                        try (PreparedStatement psStructure = conn.prepareStatement(structureSql)) {
+                            psStructure.setString(1, updateDTO.getStructure().getPresident());
+                            psStructure.setString(2, updateDTO.getStructure().getVicePresident());
+                            psStructure.setString(3, updateDTO.getStructure().getTreasurer());
+                            psStructure.setString(4, updateDTO.getStructure().getSecretary());
+                            psStructure.setString(5, collectivityId);
+                            psStructure.executeUpdate();
+                        }
+                    }
+
+                    // Mettre à jour les membres
+                    if (updateDTO.getMembers() != null) {
+                        String deleteMembersSql = "DELETE FROM collectivity_members WHERE collectivity_id = ?::uuid";
+                        try (PreparedStatement psDelete = conn.prepareStatement(deleteMembersSql)) {
+                            psDelete.setString(1, collectivityId);
+                            psDelete.executeUpdate();
+                        }
+
+                        String insertMemberSql = "INSERT INTO collectivity_members (collectivity_id, member_id) VALUES (?::uuid, ?::uuid)";
+                        for (String memberId : updateDTO.getMembers()) {
+                            try (PreparedStatement psInsert = conn.prepareStatement(insertMemberSql)) {
+                                psInsert.setString(1, collectivityId);
+                                psInsert.setString(2, memberId);
+                                psInsert.executeUpdate();
+                            }
+                        }
+                    }
+
+                    // Construire l'objet de réponse
+                    Collectivity collectivity = new Collectivity();
+                    collectivity.setId(rsUpdate.getString("id"));
+                    collectivity.setLocation(rsUpdate.getString("location"));
+                    collectivity.setFederationApproval(rsUpdate.getBoolean("federation_approval"));
+                    collectivity.setUniqueNumber(rsUpdate.getString("unique_number"));
+                    collectivity.setUniqueName(rsUpdate.getString("unique_name"));
+
+                    return collectivity;
+                }
+            }
         }
     }
 }
