@@ -7,7 +7,6 @@ import org.fca_backend.DTO.UpdateCollectivityDTO;
 import org.fca_backend.config.DataSourceConfig;
 import org.fca_backend.entity.*;
 import org.fca_backend.validator.CollectivityValidator;
-import org.fca_backend.validator.MemberValidator;
 import org.springframework.stereotype.Service;
 
 import java.sql.Connection;
