@@ -1,9 +1,11 @@
-package org.fca_backend.entity;
+package org.fca_backend.DTO;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.fca_backend.entity.Gender;
+import org.fca_backend.entity.MemberOccupation;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -12,8 +14,7 @@ import java.util.List;
 @NoArgsConstructor
 @Getter
 @Setter
-public class Member {
-    private String id;
+public class CreateMemberDTO {
     private String firstName;
     private String lastName;
     private LocalDate birthDate;
@@ -23,5 +24,8 @@ public class Member {
     private String phoneNumber;
     private String email;
     private MemberOccupation occupation;
-    private List<Member> referees;
+    private String collectivityIdentifier;
+    private List<String> referees;
+    private Boolean registrationFeePaid;
+    private Boolean membershipDuesPaid;
 }
