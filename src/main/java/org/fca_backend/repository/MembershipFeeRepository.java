@@ -44,7 +44,6 @@ public class MembershipFeeRepository {
         return fees;
     }
 
-    //
     public List<MembershipFee> saveAll(UUID collectivityId, List<MembershipFee> fees) {
         String sql = """
             INSERT INTO membership_fees 

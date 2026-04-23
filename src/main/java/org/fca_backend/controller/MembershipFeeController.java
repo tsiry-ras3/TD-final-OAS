@@ -3,6 +3,7 @@ package org.fca_backend.controller;
 import java.util.List;
 import java.util.UUID;
 
+import lombok.AllArgsConstructor;
 import org.fca_backend.DTO.MembershipFeeDTO;
 import org.fca_backend.entity.MembershipFee;
 import org.fca_backend.service.MembershipFeeService;
@@ -16,10 +17,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+@AllArgsConstructor
 @Controller
 @RequestMapping("/collectivities/{id}/membershipFees")
 public class MembershipFeeController {
-    @Autowired
     private MembershipFeeService feeService;
 
     @GetMapping
