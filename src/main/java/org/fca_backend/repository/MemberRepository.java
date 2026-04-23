@@ -1,11 +1,12 @@
 package org.fca_backend.repository;
 
 import lombok.AllArgsConstructor;
+
 import org.fca_backend.DTO.CreateMemberDTO;
 import org.fca_backend.config.DataSourceConfig;
 import org.fca_backend.entity.*;
 import org.fca_backend.validator.MemberValidator;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Repository;
 
 import java.sql.*;
 import java.time.LocalDate;
@@ -13,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @AllArgsConstructor
-@Service
+@Repository
 public class MemberRepository {
     private MemberValidator memberValidator;
     private DataSourceConfig dataSourceConfig;
