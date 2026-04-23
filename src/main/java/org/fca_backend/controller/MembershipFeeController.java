@@ -22,7 +22,7 @@ public class MembershipFeeController {
     private MembershipFeeService feeService;
 
     @GetMapping
-    public ResponseEntity<?> getFees(@PathVariable("id") UUID collectivityId) {
+    public ResponseEntity<?> getFees(@PathVariable("id") String collectivityId) {
         try {
             return ResponseEntity.ok(feeService.getFeeByCollectivityId(collectivityId));
         }catch (CollectivityNotFoundException e) {
@@ -35,7 +35,7 @@ public class MembershipFeeController {
 
     @PostMapping
     public ResponseEntity<?> createMembershipFees(
-            @PathVariable("id") UUID collectivityId,
+            @PathVariable("id") String collectivityId,
             @Validated @RequestBody List<MembershipFee> fees) {
         try {
             return ResponseEntity.ok(feeService.createFees(collectivityId, fees));

@@ -18,7 +18,7 @@ public class MembershipFeeService {
     private MembershipFeeRepository feeRepository;
     private CollectivityRepository collectivityRepository;
 
-    public List<MembershipFeeDTO> getFeeByCollectivityId(UUID collectivityId) {
+    public List<MembershipFeeDTO> getFeeByCollectivityId(String collectivityId) {
         if (!collectivityRepository.existsById(collectivityId)) {
             throw new CollectivityNotFoundException(collectivityId);
         }
@@ -29,7 +29,7 @@ public class MembershipFeeService {
                 .collect(Collectors.toList());
     }
 
-    public List<MembershipFeeDTO> createFees (UUID collectivityId, List<MembershipFee> feesToCreate) {
+    public List<MembershipFeeDTO> createFees (String collectivityId, List<MembershipFee> feesToCreate) {
         if (!collectivityRepository.existsById(collectivityId)) {
             throw new CollectivityNotFoundException(collectivityId);
         }

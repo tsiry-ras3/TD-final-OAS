@@ -19,7 +19,7 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
+import java.lang.String;
 
 @AllArgsConstructor
 @Repository
@@ -43,17 +43,17 @@ public class CollectivityRepository {
                     PreparedStatement psStructure = conn.prepareStatement(
                             """
                                         INSERT INTO collectivity_structure (collectivity_id, president_id, vice_president_id, treasurer_id, secretary_id)
-                                        VALUES (?::uuid, ?::uuid, ?::uuid, ?::uuid, ?::uuid)
+                                        VALUES (?, ?, ?, ?, ?)
                                     """);
                     PreparedStatement psCollectivityMember = conn.prepareStatement("""
                                 INSERT INTO collectivity_members (collectivity_id, member_id)
-                                VALUES (?::uuid, ?::uuid)
+                                VALUES (?, ?)
                                 ON CONFLICT (collectivity_id, member_id) DO NOTHING
                             """);
                     PreparedStatement psCheckMemberExists = conn.prepareStatement("""
                                 SELECT id, first_name, last_name, birth_date, gender, address,
                                        profession, phone_number, email, occupation
-                                FROM members WHERE id = ?::uuid
+                                FROM members WHERE id = ?
                             """)) {
 
                 for (CreateCollectivityDTO collectivityDTO : collectivities) {
@@ -135,7 +135,7 @@ public class CollectivityRepository {
 
         String sql = "SELECT id, first_name, last_name, birth_date, gender, address, " +
                 "profession, phone_number, email, occupation " +
-                "FROM members WHERE id = ?::uuid";
+                "FROM members WHERE id = ?";
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, memberId);
@@ -172,7 +172,7 @@ public class CollectivityRepository {
     }
 
     public Collectivity updateCollectivity(String collectivityId, UpdateCollectivityDTO updateDTO) throws Exception {
-        String checkSql = "SELECT unique_number, unique_name FROM collectivities WHERE id = ?::uuid";
+        String checkSql = "SELECT unique_number, unique_name FROM collectivities WHERE id = ?";
 
         try (Connection conn = dataSourceConfig.dataSource().getConnection()) {
             try (PreparedStatement psCheck = conn.prepareStatement(checkSql)) {
@@ -186,7 +186,7 @@ public class CollectivityRepository {
                 String updateSql = """
                             UPDATE collectivities
                             SET location = ?, federation_approval = ?, updated_at = NOW()
-                            WHERE id = ?::uuid
+                            WHERE id = ?
                             RETURNING id, location, federation_approval, unique_number, unique_name
                         """;
 
@@ -204,9 +204,9 @@ public class CollectivityRepository {
                     if (updateDTO.getStructure() != null) {
                         String structureSql = """
                                     UPDATE collectivity_structure
-                                    SET president_id = ?::uuid, vice_president_id = ?::uuid,
-                                        treasurer_id = ?::uuid, secretary_id = ?::uuid
-                                    WHERE collectivity_id = ?::uuid
+                                    SET president_id = ?, vice_president_id = ?,
+                                        treasurer_id = ?, secretary_id = ?
+                                    WHERE collectivity_id = ?
                                 """;
 
                         try (PreparedStatement psStructure = conn.prepareStatement(structureSql)) {
@@ -220,13 +220,13 @@ public class CollectivityRepository {
                     }
 
                     if (updateDTO.getMembers() != null) {
-                        String deleteMembersSql = "DELETE FROM collectivity_members WHERE collectivity_id = ?::uuid";
+                        String deleteMembersSql = "DELETE FROM collectivity_members WHERE collectivity_id = ?";
                         try (PreparedStatement psDelete = conn.prepareStatement(deleteMembersSql)) {
                             psDelete.setString(1, collectivityId);
                             psDelete.executeUpdate();
                         }
 
-                        String insertMemberSql = "INSERT INTO collectivity_members (collectivity_id, member_id) VALUES (?::uuid, ?::uuid)";
+                        String insertMemberSql = "INSERT INTO collectivity_members (collectivity_id, member_id) VALUES (?, ?)";
                         for (String memberId : updateDTO.getMembers()) {
                             try (PreparedStatement psInsert = conn.prepareStatement(insertMemberSql)) {
                                 psInsert.setString(1, collectivityId);
@@ -249,7 +249,7 @@ public class CollectivityRepository {
         }
     }
 
-    public boolean existsById(UUID id) {
+    public boolean existsById(String id) {
         String sql = "select 1 from collectivities where id = ?";
         try (Connection conn = dataSourceConfig.dataSource().getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -269,7 +269,7 @@ public class CollectivityRepository {
                            cs.president_id, cs.vice_president_id, cs.treasurer_id, cs.secretary_id
                     FROM collectivities c
                     LEFT JOIN collectivity_structure cs ON cs.collectivity_id = c.id
-                    WHERE c.id = ?::uuid
+                    WHERE c.id = ?
                 """;
 
         String membersSql = """
@@ -277,7 +277,7 @@ public class CollectivityRepository {
                            m.address, m.profession, m.phone_number, m.email, m.occupation
                     FROM members m
                     JOIN collectivity_members cm ON cm.member_id = m.id
-                    WHERE cm.collectivity_id = ?::uuid
+                    WHERE cm.collectivity_id = ?
                 """;
 
         try (Connection conn = dataSourceConfig.dataSource().getConnection();
@@ -338,7 +338,7 @@ public class CollectivityRepository {
                     SELECT id, account_type, amount, holder_name, mobile_banking_service, mobile_number,
                     bank_name, bank_code, bank_branch_code, bank_account_number, bank_account_key
                     FROM financial_accounts
-                    WHERE collectivity_id = ?::uuid
+                    WHERE collectivity_id = ?
                     ORDER BY created_at DESC
                 """;
 
@@ -407,7 +407,7 @@ public class CollectivityRepository {
     private Double calculateBalanceAtDate(Connection conn, String accountId, LocalDate atDate) throws SQLException {
         // Start with the initial amount from financial_accounts
         String sqlInitialBalance = """
-                    SELECT amount FROM financial_accounts WHERE id = ?::uuid
+                    SELECT amount FROM financial_accounts WHERE id = ?
                 """;
 
         Double balance = 0.0;
@@ -424,7 +424,7 @@ public class CollectivityRepository {
         String sqlTransactions = """
                     SELECT COALESCE(SUM(amount), 0) as total
                     FROM collectivity_transactions
-                    WHERE account_credited_id = ?::uuid
+                    WHERE account_credited_id = ?
                     AND creation_date <= ?
                 """;
 
@@ -441,7 +441,7 @@ public class CollectivityRepository {
         String sqlMemberPayments = """
                     SELECT COALESCE(SUM(amount), 0) as total
                     FROM member_payments
-                    WHERE account_credited_id = ?::uuid
+                    WHERE account_credited_id = ?
                     AND creation_date <= ?
                 """;
 

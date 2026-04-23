@@ -19,8 +19,8 @@ import lombok.ToString;
 @EqualsAndHashCode
 @ToString
 public class MembershipFee {
-    private UUID id;
-    private UUID collectivityId;
+    private String id;
+    private String collectivityId;
     private String label;
     private LocalDate eligibleFrom;
     private Frequency frequency;

@@ -7,7 +7,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.sql.Date;
 import java.util.List;
-import java.util.UUID;
+import java.lang.String;
 
 import lombok.AllArgsConstructor;
 import org.fca_backend.config.DataSourceConfig;
@@ -21,7 +21,7 @@ import org.springframework.stereotype.Repository;
 public class MembershipFeeRepository {
     private DataSourceConfig dataSourceConfig;
 
-    public List<MembershipFee> findByCollectivityId(UUID id) {
+    public List<MembershipFee> findByCollectivityId(String id) {
         String sql = """
                     SELECT id, collectivity_id, label, eligible_from, frequency, amount, status
                     FROM membership_fees
@@ -46,7 +46,7 @@ public class MembershipFeeRepository {
         return fees;
     }
 
-    public List<MembershipFee> saveAll(UUID collectivityId, List<MembershipFee> fees) {
+    public List<MembershipFee> saveAll(String collectivityId, List<MembershipFee> fees) {
         String sql = """
                     INSERT INTO membership_fees 
                     (collectivity_id, eligible_from, frequency, amount, label, status)
@@ -84,8 +84,8 @@ public class MembershipFeeRepository {
 
     private MembershipFee mapRow(ResultSet rs) throws SQLException {
         MembershipFee fee = new MembershipFee();
-        fee.setId(rs.getObject("id", UUID.class));
-        fee.setCollectivityId(rs.getObject("collectivity_id", UUID.class));
+        fee.setId(rs.getString("id"));
+        fee.setCollectivityId(rs.getString("collectivity_id"));
         fee.setLabel(rs.getString("label"));
         fee.setEligibleFrom(rs.getDate("eligible_from").toLocalDate());
         fee.setFrequency(Frequency.valueOf(rs.getString("frequency")));

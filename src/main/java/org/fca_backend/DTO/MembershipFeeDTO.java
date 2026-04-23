@@ -21,7 +21,7 @@ import lombok.ToString;
 @ToString
 @EqualsAndHashCode
 public class MembershipFeeDTO {
-    private UUID id;
+    private String id;
     private LocalDate eligibleFrom;
     private Frequency frequency;
     private BigDecimal amount;
