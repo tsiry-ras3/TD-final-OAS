@@ -7,7 +7,9 @@ import lombok.AllArgsConstructor;
 import org.fca_backend.DTO.MembershipFeeDTO;
 import org.fca_backend.entity.MembershipFee;
 import org.fca_backend.service.MembershipFeeService;
+import org.fca_backend.validator.CollectivityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
@@ -20,16 +22,28 @@ public class MembershipFeeController {
     private MembershipFeeService feeService;
 
     @GetMapping
-    public List<MembershipFeeDTO> getFees(@PathVariable("id") UUID collectivityId) {
-        return feeService.getFeeByCollectivityId(collectivityId);
+    public ResponseEntity<?> getFees(@PathVariable("id") UUID collectivityId) {
+        try {
+            return ResponseEntity.ok(feeService.getFeeByCollectivityId(collectivityId));
+        }catch (CollectivityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
+        catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
     }
 
     @PostMapping
-    public ResponseEntity<List<MembershipFeeDTO>> createMembershipFees(
+    public ResponseEntity<?> createMembershipFees(
             @PathVariable("id") UUID collectivityId,
             @Validated @RequestBody List<MembershipFee> fees) {
-        
-        List<MembershipFeeDTO> createdFees = feeService.createFees(collectivityId, fees);
-        return ResponseEntity.ok(createdFees);
+        try {
+            return ResponseEntity.ok(feeService.createFees(collectivityId, fees));
+        }catch (CollectivityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
+        catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
     }
 }
