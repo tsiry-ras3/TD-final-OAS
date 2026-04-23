@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import org.fca_backend.DTO.CreateCollectivityDTO;
 import org.fca_backend.DTO.CreateCollectivityStructureDTO;
 import org.fca_backend.DTO.UpdateCollectivityDTO;
+import org.fca_backend.DTO.FinancialAccountDTO;
 import org.fca_backend.config.DataSourceConfig;
 import org.fca_backend.entity.*;
 import org.fca_backend.validator.CollectivityNotFoundException;
@@ -35,24 +36,25 @@ public class CollectivityRepository {
             conn.setAutoCommit(false);
 
             try (PreparedStatement psCollectivity = conn.prepareStatement("""
-                INSERT INTO collectivities (location, federation_approval)
-                VALUES (?, ?)
-                RETURNING id, location, federation_approval
-            """);
-                 PreparedStatement psStructure = conn.prepareStatement("""
-                INSERT INTO collectivity_structure (collectivity_id, president_id, vice_president_id, treasurer_id, secretary_id)
-                VALUES (?::uuid, ?::uuid, ?::uuid, ?::uuid, ?::uuid)
-            """);
-                 PreparedStatement psCollectivityMember = conn.prepareStatement("""
-                INSERT INTO collectivity_members (collectivity_id, member_id)
-                VALUES (?::uuid, ?::uuid)
-                ON CONFLICT (collectivity_id, member_id) DO NOTHING
-            """);
-                 PreparedStatement psCheckMemberExists = conn.prepareStatement("""
-                SELECT id, first_name, last_name, birth_date, gender, address, 
-                       profession, phone_number, email, occupation
-                FROM members WHERE id = ?::uuid
-            """)) {
+                        INSERT INTO collectivities (location, federation_approval)
+                        VALUES (?, ?)
+                        RETURNING id, location, federation_approval
+                    """);
+                    PreparedStatement psStructure = conn.prepareStatement(
+                            """
+                                        INSERT INTO collectivity_structure (collectivity_id, president_id, vice_president_id, treasurer_id, secretary_id)
+                                        VALUES (?::uuid, ?::uuid, ?::uuid, ?::uuid, ?::uuid)
+                                    """);
+                    PreparedStatement psCollectivityMember = conn.prepareStatement("""
+                                INSERT INTO collectivity_members (collectivity_id, member_id)
+                                VALUES (?::uuid, ?::uuid)
+                                ON CONFLICT (collectivity_id, member_id) DO NOTHING
+                            """);
+                    PreparedStatement psCheckMemberExists = conn.prepareStatement("""
+                                SELECT id, first_name, last_name, birth_date, gender, address,
+                                       profession, phone_number, email, occupation
+                                FROM members WHERE id = ?::uuid
+                            """)) {
 
                 for (CreateCollectivityDTO collectivityDTO : collectivities) {
                     psCollectivity.setString(1, collectivityDTO.getLocation());
@@ -182,11 +184,11 @@ public class CollectivityRepository {
                 }
 
                 String updateSql = """
-                UPDATE collectivities 
-                SET location = ?, federation_approval = ?, updated_at = NOW()
-                WHERE id = ?::uuid
-                RETURNING id, location, federation_approval, unique_number, unique_name
-            """;
+                            UPDATE collectivities
+                            SET location = ?, federation_approval = ?, updated_at = NOW()
+                            WHERE id = ?::uuid
+                            RETURNING id, location, federation_approval, unique_number, unique_name
+                        """;
 
                 try (PreparedStatement psUpdate = conn.prepareStatement(updateSql)) {
                     psUpdate.setString(1, updateDTO.getLocation());
@@ -201,11 +203,11 @@ public class CollectivityRepository {
 
                     if (updateDTO.getStructure() != null) {
                         String structureSql = """
-                        UPDATE collectivity_structure 
-                        SET president_id = ?::uuid, vice_president_id = ?::uuid, 
-                            treasurer_id = ?::uuid, secretary_id = ?::uuid
-                        WHERE collectivity_id = ?::uuid
-                    """;
+                                    UPDATE collectivity_structure
+                                    SET president_id = ?::uuid, vice_president_id = ?::uuid,
+                                        treasurer_id = ?::uuid, secretary_id = ?::uuid
+                                    WHERE collectivity_id = ?::uuid
+                                """;
 
                         try (PreparedStatement psStructure = conn.prepareStatement(structureSql)) {
                             psStructure.setString(1, updateDTO.getStructure().getPresident());
@@ -263,24 +265,24 @@ public class CollectivityRepository {
 
     public Collectivity findCollectivityById(String id) {
         String sql = """
-        SELECT c.id, c.location, c.federation_approval, c.name, c.number,
-               cs.president_id, cs.vice_president_id, cs.treasurer_id, cs.secretary_id
-        FROM collectivities c
-        LEFT JOIN collectivity_structure cs ON cs.collectivity_id = c.id
-        WHERE c.id = ?::uuid
-    """;
+                    SELECT c.id, c.location, c.federation_approval, c.name, c.number,
+                           cs.president_id, cs.vice_president_id, cs.treasurer_id, cs.secretary_id
+                    FROM collectivities c
+                    LEFT JOIN collectivity_structure cs ON cs.collectivity_id = c.id
+                    WHERE c.id = ?::uuid
+                """;
 
         String membersSql = """
-        SELECT m.id, m.first_name, m.last_name, m.birth_date, m.gender,
-               m.address, m.profession, m.phone_number, m.email, m.occupation
-        FROM members m
-        JOIN collectivity_members cm ON cm.member_id = m.id
-        WHERE cm.collectivity_id = ?::uuid
-    """;
+                    SELECT m.id, m.first_name, m.last_name, m.birth_date, m.gender,
+                           m.address, m.profession, m.phone_number, m.email, m.occupation
+                    FROM members m
+                    JOIN collectivity_members cm ON cm.member_id = m.id
+                    WHERE cm.collectivity_id = ?::uuid
+                """;
 
         try (Connection conn = dataSourceConfig.dataSource().getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             PreparedStatement psMembers = conn.prepareStatement(membersSql)) {
+                PreparedStatement ps = conn.prepareStatement(sql);
+                PreparedStatement psMembers = conn.prepareStatement(membersSql)) {
 
             ps.setString(1, id);
             ResultSet rs = ps.executeQuery();
@@ -327,6 +329,132 @@ public class CollectivityRepository {
         } catch (Exception e) {
             throw new RuntimeException("Error fetching collectivity: " + e.getMessage(), e);
         }
+    }
+
+    public List<FinancialAccount> getFinancialAccountsByCollectivityId(String collectivityId, LocalDate atDate) {
+        List<FinancialAccount> accounts = new ArrayList<>();
+
+        String sql = """
+                    SELECT id, account_type, amount, holder_name, mobile_banking_service, mobile_number,
+                    bank_name, bank_code, bank_branch_code, bank_account_number, bank_account_key
+                    FROM financial_accounts
+                    WHERE collectivity_id = ?::uuid
+                    ORDER BY created_at DESC
+                """;
+
+        try (Connection conn = dataSourceConfig.dataSource().getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, collectivityId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                String accountType = rs.getString("account_type");
+                String id = rs.getString("id");
+                Double amount = rs.getDouble("amount");
+
+                // If atDate is provided, calculate balance at that date
+                if (atDate != null) {
+                    amount = calculateBalanceAtDate(conn, id, atDate);
+                }
+
+                FinancialAccount account = null;
+
+                if ("CASH".equals(accountType)) {
+                    CashAccount cashAccount = new CashAccount();
+                    cashAccount.setId(id);
+                    cashAccount.setAmount(amount);
+                    account = cashAccount;
+                } else if ("MOBILE_BANKING".equals(accountType)) {
+                    MobileBankingAccount mobileAccount = new MobileBankingAccount();
+                    mobileAccount.setId(id);
+                    mobileAccount.setAmount(amount);
+                    mobileAccount.setHolderName(rs.getString("holder_name"));
+                    String serviceName = rs.getString("mobile_banking_service");
+                    if (serviceName != null) {
+                        mobileAccount.setMobileBankingService(MobileBankingService.valueOf(serviceName));
+                    }
+                    mobileAccount.setMobileNumber(rs.getString("mobile_number"));
+                    account = mobileAccount;
+                } else if ("BANK".equals(accountType)) {
+                    BankAccount bankAccount = new BankAccount();
+                    bankAccount.setId(id);
+                    bankAccount.setAmount(amount);
+                    bankAccount.setHolderName(rs.getString("holder_name"));
+                    String bankName = rs.getString("bank_name");
+                    if (bankName != null) {
+                        bankAccount.setBankName(Bank.valueOf(bankName));
+                    }
+                    bankAccount.setBankCode(rs.getInt("bank_code"));
+                    bankAccount.setBankBranchCode(rs.getInt("bank_branch_code"));
+                    bankAccount.setBankAccountNumber(rs.getInt("bank_account_number"));
+                    bankAccount.setBankAccountKey(rs.getInt("bank_account_key"));
+                    account = bankAccount;
+                }
+
+                if (account != null) {
+                    accounts.add(account);
+                }
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Error fetching financial accounts: " + e.getMessage(), e);
+        }
+
+        return accounts;
+    }
+
+    private Double calculateBalanceAtDate(Connection conn, String accountId, LocalDate atDate) throws SQLException {
+        // Start with the initial amount from financial_accounts
+        String sqlInitialBalance = """
+                    SELECT amount FROM financial_accounts WHERE id = ?::uuid
+                """;
+
+        Double balance = 0.0;
+
+        try (PreparedStatement ps = conn.prepareStatement(sqlInitialBalance)) {
+            ps.setString(1, accountId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                balance = rs.getDouble("amount");
+            }
+        }
+
+        // Calculate transactions up to the atDate
+        String sqlTransactions = """
+                    SELECT COALESCE(SUM(amount), 0) as total
+                    FROM collectivity_transactions
+                    WHERE account_credited_id = ?::uuid
+                    AND creation_date <= ?
+                """;
+
+        try (PreparedStatement ps = conn.prepareStatement(sqlTransactions)) {
+            ps.setString(1, accountId);
+            ps.setDate(2, java.sql.Date.valueOf(atDate));
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                balance += rs.getDouble("total");
+            }
+        }
+
+        // Also include member payments
+        String sqlMemberPayments = """
+                    SELECT COALESCE(SUM(amount), 0) as total
+                    FROM member_payments
+                    WHERE account_credited_id = ?::uuid
+                    AND creation_date <= ?
+                """;
+
+        try (PreparedStatement ps = conn.prepareStatement(sqlMemberPayments)) {
+            ps.setString(1, accountId);
+            ps.setDate(2, java.sql.Date.valueOf(atDate));
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                balance += rs.getDouble("total");
+            }
+        }
+
+        return balance;
     }
 
 }

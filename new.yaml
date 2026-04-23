@@ -146,6 +146,45 @@ paths:
           description: Provided query parameters occur some exceptions.
         404:
           description: Collectivity not found.
+  '/collectivities/{id}/financialAccounts':
+    get:
+      summary: Get financial accounts of a collectivity
+      description: |
+        Retrieves the list of financial accounts (cash, mobile banking, or bank) for a given collectivity.
+        Optionally returns the account balances at a specific date if the 'at' parameter is provided.
+        
+        Account types:
+        - **Cash account**: Simple cash box account
+        - **Mobile banking**: Account with mobile money service (Airtel Money, Mvola, Orange Money)
+        - **Bank account**: Traditional bank account with account details
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: The collectivity ID
+        - in: query
+          name: at
+          required: false
+          description: Optional date to retrieve account balances at that specific date (YYYY-MM-DD format)
+          schema:
+            type: string
+            format: date
+            example: "2024-05-10"
+      responses:
+        200:
+          description: List of financial accounts with current or historical balance
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FinancialAccountInfo'
+        400:
+          description: Invalid date format or other query parameter errors
+        404:
+          description: Collectivity not found.
   '/members':
     post:
       summary: Create list of members
