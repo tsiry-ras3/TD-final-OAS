@@ -2,7 +2,6 @@ package org.fca_backend.repository;
 
 import lombok.AllArgsConstructor;
 import org.fca_backend.config.DataSourceConfig;
-import org.fca_backend.entity.FinancialAccount;
 import org.fca_backend.entity.Member;
 import org.fca_backend.entity.PaymentMode;
 import org.fca_backend.entity.Transaction;
@@ -13,7 +12,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 

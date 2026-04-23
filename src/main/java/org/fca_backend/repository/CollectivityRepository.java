@@ -1,13 +1,14 @@
 package org.fca_backend.repository;
 
 import lombok.AllArgsConstructor;
+
 import org.fca_backend.DTO.CreateCollectivityDTO;
 import org.fca_backend.DTO.CreateCollectivityStructureDTO;
 import org.fca_backend.DTO.UpdateCollectivityDTO;
 import org.fca_backend.config.DataSourceConfig;
 import org.fca_backend.entity.*;
 import org.fca_backend.validator.CollectivityValidator;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Repository;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -16,9 +17,10 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @AllArgsConstructor
-@Service
+@Repository
 public class CollectivityRepository {
     private CollectivityValidator collectivityValidator;
     private DataSourceConfig dataSourceConfig;
@@ -165,6 +167,8 @@ public class CollectivityRepository {
             throw new Exception("Database error while fetching member: " + e.getMessage(), e);
         }
     }
+
+    // update collectivity
     public Collectivity updateCollectivity(String collectivityId, UpdateCollectivityDTO updateDTO) throws Exception {
         String checkSql = "SELECT unique_number, unique_name FROM collectivities WHERE id = ?::uuid";
 
@@ -245,4 +249,20 @@ public class CollectivityRepository {
             }
         }
     }
+
+    // find collectivity if exist by id
+    public boolean existsById(UUID id) {
+        String sql = "select 1 from collectivities where id = ?";
+        try (Connection conn = dataSourceConfig.dataSource().getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, id);
+            try (
+                    ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
 }

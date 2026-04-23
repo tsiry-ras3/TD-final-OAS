@@ -1,9 +1,11 @@
-package org.fca_backend.entity;
+package org.fca_backend.DTO;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
+
+import org.fca_backend.entity.ActivityStatus;
+import org.fca_backend.entity.Frequency;
 
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
@@ -16,16 +18,13 @@ import lombok.ToString;
 @NoArgsConstructor
 @Getter
 @Setter
-@EqualsAndHashCode
 @ToString
-public class MembershipFee {
+@EqualsAndHashCode
+public class MembershipFeeDTO {
     private UUID id;
-    private UUID collectivityId;
-    private String label;
     private LocalDate eligibleFrom;
     private Frequency frequency;
     private BigDecimal amount;
+    private String label;
     private ActivityStatus status;
-    private Instant createdAt;
-    private Instant updatedAt;
 }
