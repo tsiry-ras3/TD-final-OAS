@@ -27,4 +27,7 @@ public class CollectivityService {
             throw new BadRequestException(e.getMessage());
         }
     }
+    public Collectivity getCollectivityById(String id){
+        return collectivityRepository.findCollectivityById(id);
+    }
 }

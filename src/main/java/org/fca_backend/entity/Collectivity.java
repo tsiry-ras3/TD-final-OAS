@@ -16,6 +16,6 @@ public class Collectivity {
     private Boolean federationApproval;
     private CollectivityStructure structure;
     private List<Member> members;
-    private String uniqueNumber;
-    private String uniqueName;
+    private String number;
+    private String name;
 }

@@ -8,6 +8,7 @@ import org.fca_backend.entity.Collectivity;
 import org.fca_backend.exception.BadRequestException;
 import org.fca_backend.repository.CollectivityTransactionRepository;
 import org.fca_backend.service.CollectivityService;
+import org.fca_backend.validator.CollectivityNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -45,6 +46,17 @@ public class CollectivityControler {
         try {
             return ResponseEntity.status(HttpStatus.OK).body(ctRepository.getCollectivityTransaction(id));
         } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+    @GetMapping("/collectivities/{id}")
+    public ResponseEntity<?> getCollectivityById(@PathVariable String id){
+        try{
+            return ResponseEntity.status(HttpStatus.OK).body(collectivityService.getCollectivityById(id));
+        }catch (CollectivityNotFoundException e){
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
+        catch (Exception e) {
             throw new RuntimeException(e);
         }
     }

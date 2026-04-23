@@ -7,6 +7,7 @@ import org.fca_backend.DTO.CreateCollectivityStructureDTO;
 import org.fca_backend.DTO.UpdateCollectivityDTO;
 import org.fca_backend.config.DataSourceConfig;
 import org.fca_backend.entity.*;
+import org.fca_backend.validator.CollectivityNotFoundException;
 import org.fca_backend.validator.CollectivityValidator;
 import org.springframework.stereotype.Repository;
 
@@ -168,7 +169,6 @@ public class CollectivityRepository {
         }
     }
 
-    // update collectivity
     public Collectivity updateCollectivity(String collectivityId, UpdateCollectivityDTO updateDTO) throws Exception {
         String checkSql = "SELECT unique_number, unique_name FROM collectivities WHERE id = ?::uuid";
 
@@ -178,7 +178,7 @@ public class CollectivityRepository {
                 ResultSet rs = psCheck.executeQuery();
 
                 if (!rs.next()) {
-                    throw new Exception("Collectivity not found with ID: " + collectivityId);
+                    throw new CollectivityNotFoundException(collectivityId);
                 }
 
                 String updateSql = """
@@ -199,7 +199,6 @@ public class CollectivityRepository {
                         throw new SQLException("Failed to update collectivity");
                     }
 
-                    // Mettre à jour la structure
                     if (updateDTO.getStructure() != null) {
                         String structureSql = """
                         UPDATE collectivity_structure 
@@ -218,7 +217,6 @@ public class CollectivityRepository {
                         }
                     }
 
-                    // Mettre à jour les membres
                     if (updateDTO.getMembers() != null) {
                         String deleteMembersSql = "DELETE FROM collectivity_members WHERE collectivity_id = ?::uuid";
                         try (PreparedStatement psDelete = conn.prepareStatement(deleteMembersSql)) {
@@ -236,13 +234,12 @@ public class CollectivityRepository {
                         }
                     }
 
-                    // Construire l'objet de réponse
                     Collectivity collectivity = new Collectivity();
                     collectivity.setId(rsUpdate.getString("id"));
                     collectivity.setLocation(rsUpdate.getString("location"));
                     collectivity.setFederationApproval(rsUpdate.getBoolean("federation_approval"));
-                    collectivity.setUniqueNumber(rsUpdate.getString("unique_number"));
-                    collectivity.setUniqueName(rsUpdate.getString("unique_name"));
+                    collectivity.setNumber(rsUpdate.getString("unique_number"));
+                    collectivity.setName(rsUpdate.getString("unique_name"));
 
                     return collectivity;
                 }
@@ -250,7 +247,6 @@ public class CollectivityRepository {
         }
     }
 
-    // find collectivity if exist by id
     public boolean existsById(UUID id) {
         String sql = "select 1 from collectivities where id = ?";
         try (Connection conn = dataSourceConfig.dataSource().getConnection();
@@ -262,6 +258,74 @@ public class CollectivityRepository {
             }
         } catch (SQLException e) {
             throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    public Collectivity findCollectivityById(String id) {
+        String sql = """
+        SELECT c.id, c.location, c.federation_approval, c.name, c.number,
+               cs.president_id, cs.vice_president_id, cs.treasurer_id, cs.secretary_id
+        FROM collectivities c
+        LEFT JOIN collectivity_structure cs ON cs.collectivity_id = c.id
+        WHERE c.id = ?::uuid
+    """;
+
+        String membersSql = """
+        SELECT m.id, m.first_name, m.last_name, m.birth_date, m.gender,
+               m.address, m.profession, m.phone_number, m.email, m.occupation
+        FROM members m
+        JOIN collectivity_members cm ON cm.member_id = m.id
+        WHERE cm.collectivity_id = ?::uuid
+    """;
+
+        try (Connection conn = dataSourceConfig.dataSource().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             PreparedStatement psMembers = conn.prepareStatement(membersSql)) {
+
+            ps.setString(1, id);
+            ResultSet rs = ps.executeQuery();
+
+            if (!rs.next()) {
+                throw new CollectivityNotFoundException(id);
+            }
+
+            Collectivity collectivity = new Collectivity();
+            collectivity.setId(rs.getString("id"));
+            collectivity.setLocation(rs.getString("location"));
+            collectivity.setFederationApproval(rs.getBoolean("federation_approval"));
+            collectivity.setName(rs.getString("name"));
+            collectivity.setNumber(rs.getString("number"));
+
+            CollectivityStructure structure = new CollectivityStructure();
+            structure.setPresident(getMemberIfExists(conn, rs.getString("president_id")));
+            structure.setVicePresident(getMemberIfExists(conn, rs.getString("vice_president_id")));
+            structure.setTreasurer(getMemberIfExists(conn, rs.getString("treasurer_id")));
+            structure.setSecretary(getMemberIfExists(conn, rs.getString("secretary_id")));
+            collectivity.setStructure(structure);
+
+            psMembers.setString(1, id);
+            ResultSet rsMembers = psMembers.executeQuery();
+            List<Member> members = new ArrayList<>();
+            while (rsMembers.next()) {
+                Member member = new Member();
+                member.setId(rsMembers.getString("id"));
+                member.setFirstName(rsMembers.getString("first_name"));
+                member.setLastName(rsMembers.getString("last_name"));
+                member.setBirthDate(LocalDate.parse(rsMembers.getString("birth_date")));
+                member.setGender(Gender.valueOf(rsMembers.getString("gender")));
+                member.setAddress(rsMembers.getString("address"));
+                member.setProfession(rsMembers.getString("profession"));
+                member.setPhoneNumber(rsMembers.getString("phone_number"));
+                member.setEmail(rsMembers.getString("email"));
+                member.setOccupation(MemberOccupation.valueOf(rsMembers.getString("occupation")));
+                members.add(member);
+            }
+            collectivity.setMembers(members);
+
+            return collectivity;
+
+        } catch (Exception e) {
+            throw new RuntimeException("Error fetching collectivity: " + e.getMessage(), e);
         }
     }
 
