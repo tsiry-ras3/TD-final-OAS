@@ -288,7 +288,7 @@ public class CollectivityRepository {
             ResultSet rs = ps.executeQuery();
 
             if (!rs.next()) {
-                throw new CollectivityNotFoundException(id);
+                throw new CollectivityNotFoundException("collectivity not found : " + id);
             }
 
             Collectivity collectivity = new Collectivity();
@@ -326,6 +326,8 @@ public class CollectivityRepository {
 
             return collectivity;
 
+        }catch (CollectivityNotFoundException e) {
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException("Error fetching collectivity: " + e.getMessage(), e);
         }

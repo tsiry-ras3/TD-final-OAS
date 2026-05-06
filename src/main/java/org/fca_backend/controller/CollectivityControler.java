@@ -32,7 +32,7 @@ public class CollectivityControler {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
     }
-    @PutMapping("/collectivities/{collectivityId}")
+    @PutMapping("/collectivities/{collectivityId}/informations")
     public ResponseEntity<?> updateCollectivity(
             @PathVariable String collectivityId,
             @RequestBody UpdateCollectivityDTO updateCollectivityDTO) {
