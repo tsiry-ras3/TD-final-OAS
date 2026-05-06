@@ -43,7 +43,7 @@ public class CollectivityControler {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
     }
-    @GetMapping("/collectivites/{id}/transactions")
+    @GetMapping("/collectivities/{id}/transactions")
     public ResponseEntity<?> getTransactions(@PathVariable String id){
         try {
             return ResponseEntity.status(HttpStatus.OK).body(ctRepository.getCollectivityTransaction(id));
