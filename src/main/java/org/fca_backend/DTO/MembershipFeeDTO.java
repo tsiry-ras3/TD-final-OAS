@@ -2,7 +2,6 @@ package org.fca_backend.DTO;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.UUID;
 
 import org.fca_backend.entity.ActivityStatus;
 import org.fca_backend.entity.Frequency;
@@ -21,7 +20,7 @@ import lombok.ToString;
 @ToString
 @EqualsAndHashCode
 public class MembershipFeeDTO {
-    private UUID id;
+    private String id;
     private LocalDate eligibleFrom;
     private Frequency frequency;
     private BigDecimal amount;
