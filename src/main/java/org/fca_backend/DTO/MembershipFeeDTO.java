@@ -2,7 +2,6 @@ package org.fca_backend.DTO;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.UUID;
 
 import org.fca_backend.entity.ActivityStatus;
 import org.fca_backend.entity.Frequency;
