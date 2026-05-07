@@ -1,9 +1,9 @@
 package org.fca_backend.service;
 
 import org.fca_backend.entity.Transaction;
+import org.fca_backend.exception.CollectivityNotFoundException;
 import org.fca_backend.repository.CollectivityRepository;
 import org.fca_backend.repository.CollectivityTransactionRepository;
-import org.fca_backend.validator.CollectivityNotFoundException;
 import org.springframework.stereotype.Service;
 
 import lombok.AllArgsConstructor;

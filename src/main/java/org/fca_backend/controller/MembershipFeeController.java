@@ -4,8 +4,8 @@ import java.util.List;
 
 import lombok.AllArgsConstructor;
 import org.fca_backend.entity.MembershipFee;
+import org.fca_backend.exception.CollectivityNotFoundException;
 import org.fca_backend.service.MembershipFeeService;
-import org.fca_backend.validator.CollectivityNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;

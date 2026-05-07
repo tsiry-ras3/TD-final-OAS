@@ -7,7 +7,7 @@ import org.fca_backend.DTO.CreateCollectivityStructureDTO;
 import org.fca_backend.DTO.UpdateCollectivityDTO;
 import org.fca_backend.config.DataSourceConfig;
 import org.fca_backend.entity.*;
-import org.fca_backend.validator.CollectivityNotFoundException;
+import org.fca_backend.exception.CollectivityNotFoundException;
 import org.fca_backend.validator.CollectivityValidator;
 import org.springframework.stereotype.Repository;
 
