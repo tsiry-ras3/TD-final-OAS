@@ -5,11 +5,11 @@ import java.util.List;
 import org.apache.coyote.BadRequestException;
 import org.fca_backend.DTO.CreateActivityMemberAttendanceDto;
 import org.fca_backend.entity.ActivityMemberAttendance;
+import org.fca_backend.exception.CollectivityNotFoundException;
 import org.fca_backend.repository.AttendanceRepository;
 import org.fca_backend.repository.CollectivityActivityRepository;
 import org.fca_backend.repository.CollectivityRepository;
 import org.fca_backend.validator.AttendanceValidator;
-import org.fca_backend.validator.CollectivityNotFoundException;
 import org.springframework.stereotype.Service;
 
 import lombok.AllArgsConstructor;

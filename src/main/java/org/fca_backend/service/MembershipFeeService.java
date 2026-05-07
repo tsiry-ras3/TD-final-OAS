@@ -6,9 +6,9 @@ import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import org.fca_backend.DTO.MembershipFeeDTO;
 import org.fca_backend.entity.MembershipFee;
+import org.fca_backend.exception.CollectivityNotFoundException;
 import org.fca_backend.repository.CollectivityRepository;
 import org.fca_backend.repository.MembershipFeeRepository;
-import org.fca_backend.validator.CollectivityNotFoundException;
 import org.springframework.stereotype.Service;
 @AllArgsConstructor
 @Service

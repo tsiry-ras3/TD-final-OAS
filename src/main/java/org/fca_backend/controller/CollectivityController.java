@@ -11,12 +11,12 @@ import org.fca_backend.entity.Collectivity;
 import org.fca_backend.entity.CollectivityActivity;
 import org.fca_backend.entity.FinancialAccount;
 import org.fca_backend.exception.BadRequestException;
+import org.fca_backend.exception.CollectivityNotFoundException;
 import org.fca_backend.service.AttendanceService;
 import org.fca_backend.service.CollectivityActivityService;
 import org.fca_backend.service.CollectivityService;
 import org.fca_backend.service.CollectivityStatisticsService;
 import org.fca_backend.service.CollectivityTransactionService;
-import org.fca_backend.validator.CollectivityNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -51,7 +51,7 @@ public class CollectivityController {
             Collectivity collectivity = collectivityService.updateCollectivity(collectivityId, updateCollectivityDTO);
             return ResponseEntity.status(HttpStatus.OK).body(collectivity);
         } catch (CollectivityNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Collectivity not found");
         } catch (BadRequestException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
@@ -62,7 +62,7 @@ public class CollectivityController {
         try {
             return ResponseEntity.status(HttpStatus.OK).body(collectivityActivityService.getActivities(id));
         } catch (CollectivityNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Collectivity not found");
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
