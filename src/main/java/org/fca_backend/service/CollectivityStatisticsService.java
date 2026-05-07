@@ -6,9 +6,9 @@ import java.util.List;
 import org.fca_backend.DTO.CollectivityLocalStatistics;
 import org.fca_backend.entity.CollectivityOverall;
 import org.fca_backend.exception.BadRequestException;
+import org.fca_backend.exception.CollectivityNotFoundException;
 import org.fca_backend.repository.CollectivityRepository;
 import org.fca_backend.repository.CollectivityStatisticsRepository;
-import org.fca_backend.validator.CollectivityNotFoundException;
 import org.springframework.stereotype.Service;
 
 import lombok.AllArgsConstructor;
