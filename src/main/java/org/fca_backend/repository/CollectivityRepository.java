@@ -5,10 +5,9 @@ import lombok.AllArgsConstructor;
 import org.fca_backend.DTO.CreateCollectivityDTO;
 import org.fca_backend.DTO.CreateCollectivityStructureDTO;
 import org.fca_backend.DTO.UpdateCollectivityDTO;
-import org.fca_backend.DTO.FinancialAccountDTO;
 import org.fca_backend.config.DataSourceConfig;
 import org.fca_backend.entity.*;
-import org.fca_backend.validator.CollectivityNotFoundException;
+import org.fca_backend.exception.CollectivityNotFoundException;
 import org.fca_backend.validator.CollectivityValidator;
 import org.springframework.stereotype.Repository;
 
@@ -288,7 +287,7 @@ public class CollectivityRepository {
             ResultSet rs = ps.executeQuery();
 
             if (!rs.next()) {
-                throw new CollectivityNotFoundException(id);
+                throw new CollectivityNotFoundException("collectivity not found : " + id);
             }
 
             Collectivity collectivity = new Collectivity();
@@ -326,6 +325,8 @@ public class CollectivityRepository {
 
             return collectivity;
 
+        }catch (CollectivityNotFoundException e) {
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException("Error fetching collectivity: " + e.getMessage(), e);
         }
