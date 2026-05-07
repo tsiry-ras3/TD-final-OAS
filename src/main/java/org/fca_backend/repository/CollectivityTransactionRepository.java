@@ -1,6 +1,12 @@
 package org.fca_backend.repository;
 
-import lombok.AllArgsConstructor;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.fca_backend.config.DataSourceConfig;
 import org.fca_backend.entity.Member;
 import org.fca_backend.entity.PaymentMode;
@@ -8,12 +14,7 @@ import org.fca_backend.entity.Transaction;
 import org.fca_backend.utils.FinancialAccountMapper;
 import org.springframework.stereotype.Repository;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
+import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
 @Repository
@@ -30,6 +31,7 @@ public class CollectivityTransactionRepository {
                         ct.amount,
                         ct.payment_mode,
                         ct.account_credited_id,
+                        fa.id AS account_id,
                         fa.account_type,
                         fa.amount AS account_amount,
                         fa.holder_name,

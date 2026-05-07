@@ -12,13 +12,13 @@ public class FinancialAccountMapper {
 
         if ("CASH".equals(type)) {
             CashAccount account = new CashAccount();
-            account.setId(rs.getString("id"));
-            account.setAmount(rs.getDouble("amount"));
+            account.setId(rs.getString("account_id"));
+            account.setAmount(rs.getDouble("account_amount"));
             return account;
         } else if ("MOBILE_BANKING".equals(type)) {
             MobileBankingAccount account = new MobileBankingAccount();
-            account.setId(rs.getString("id"));
-            account.setAmount(rs.getDouble("amount"));
+            account.setId(rs.getString("account_id"));
+            account.setAmount(rs.getDouble("account_amount"));
             account.setHolderName(rs.getString("holder_name"));
             account.setMobileBankingService(
                     MobileBankingService.valueOf(rs.getString("mobile_banking_service"))
@@ -27,8 +27,8 @@ public class FinancialAccountMapper {
             return account;
         } else if ("BANK".equals(type)) {
             BankAccount account = new BankAccount();
-            account.setId(rs.getString("id"));
-            account.setAmount(rs.getDouble("amount"));
+            account.setId(rs.getString("account_id"));
+            account.setAmount(rs.getDouble("account_amount"));
             account.setHolderName(rs.getString("holder_name"));
             account.setBankName(Bank.valueOf(rs.getString("bank_name")));
             account.setBankCode(rs.getInt("bank_code"));

@@ -60,7 +60,7 @@ public class CollectivityController {
     @GetMapping("/collectivities/{id}/transactions")
     public ResponseEntity<?> getTransactions(@PathVariable String id) {
         try {
-            return ResponseEntity.status(HttpStatus.OK).body(collectivityActivityService.getActivities(id));
+            return ResponseEntity.status(HttpStatus.OK).body(collectivityTransactionService.getTransaction(id));
         } catch (CollectivityNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Collectivity not found");
         } catch (Exception e) {
