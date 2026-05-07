@@ -97,11 +97,13 @@ public class CollectivityController {
     @GetMapping("/collectivities/{id}/statistics")
     public ResponseEntity<?> getCollectivityStatistics(
             @PathVariable String id,
-            @RequestParam LocalDate from,
-            @RequestParam LocalDate to) {
+            @RequestParam(required = false) LocalDate from,
+            @RequestParam(required = false) LocalDate to) {
         try {
             List<?> statistics = collectivityStatisticsService.getCollectivityStatistics(id, from, to);
             return ResponseEntity.status(HttpStatus.OK).body(statistics);
+        } catch (CollectivityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         } catch (BadRequestException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (Exception e) {
@@ -111,11 +113,13 @@ public class CollectivityController {
 
       @GetMapping("/collectivities/statistics")
     public ResponseEntity<?> getOverallStatistics(
-            @RequestParam LocalDate from,
-            @RequestParam LocalDate to) {
+            @RequestParam(required = false) LocalDate from,
+            @RequestParam(required = false) LocalDate to) {
         try {
             List<CollectivityOverall> statistics = collectivityStatisticsService.getOverallStatistics(from, to);
             return ResponseEntity.status(HttpStatus.OK).body(statistics);
+        } catch (BadRequestException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error retrieving overall statistics");
         }
