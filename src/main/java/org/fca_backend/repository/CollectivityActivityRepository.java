@@ -230,4 +230,17 @@ public class CollectivityActivityRepository {
         }
         return null;
     }
+
+    public boolean existsById(String activityId) {
+        String sql = "SELECT 1 FROM collectivity_activity WHERE id = ?";
+        try (Connection conn = dataSourceConfig.dataSource().getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, activityId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
 }
