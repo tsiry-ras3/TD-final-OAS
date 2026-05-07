@@ -53,7 +53,7 @@ public class CollectivityTransactionRepository {
                     FROM collectivity_transactions ct
                     JOIN members m ON ct.member_debited_id = m.id
                     JOIN financial_accounts fa ON ct.account_credited_id = fa.id
-                    WHERE ct.collectivity_id = ?::uuid
+                    WHERE ct.collectivity_id = ?
                     """);
 
             preparedStatement.setString(1, id);

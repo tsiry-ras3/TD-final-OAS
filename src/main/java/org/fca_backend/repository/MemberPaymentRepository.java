@@ -21,19 +21,19 @@ public class MemberPaymentRepository {
         String getCollectivityAndAccountSql = """
             SELECT m.collectivity_id, mf.collectivity_id as fee_collectivity_id
             FROM members m
-            JOIN membership_fees mf ON mf.id = ?::uuid
-            WHERE m.id = ?::uuid
+            JOIN membership_fees mf ON mf.id = ?
+            WHERE m.id = ?
         """;
 
         String insertPaymentSql = """
             INSERT INTO member_payments (member_id, membership_fee_id, account_credited_id, amount, payment_mode)
-            VALUES (?::uuid, ?::uuid, ?::uuid, ?, ?::payment_mode)
+            VALUES (?, ?, ?, ?, ?::payment_mode)
             RETURNING id, amount, payment_mode, creation_date
         """;
 
         String insertTransactionSql = """
             INSERT INTO collectivity_transactions (collectivity_id, member_debited_id, account_credited_id, amount, payment_mode)
-            VALUES (?::uuid, ?::uuid, ?::uuid, ?, ?::payment_mode)
+            VALUES (?, ?, ?, ?, ?::payment_mode)
         """;
 
         String getAccountSql = """
@@ -42,7 +42,7 @@ public class MemberPaymentRepository {
                    bank_name, bank_code, bank_branch_code,
                    bank_account_number, bank_account_key
             FROM financial_accounts
-            WHERE id = ?::uuid
+            WHERE id = ?
         """;
 
         List<MemberPayment> createdPayments = new ArrayList<>();

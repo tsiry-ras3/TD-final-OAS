@@ -31,22 +31,22 @@ public class MemberRepository {
                 INSERT INTO members (first_name, last_name, birth_date, gender, address, 
                                    profession, phone_number, email, occupation, 
                                    registration_fee_paid, membership_dues_paid, collectivity_id)
-                VALUES (?, ?, ?, ?::gender, ?, ?, ?::bigint, ?, ?::member_occupation, ?, ?, ?::uuid)
+                VALUES (?, ?, ?, ?::gender, ?, ?, ?::bigint, ?, ?::member_occupation, ?, ?, ?)
                 RETURNING id, first_name, last_name, birth_date, gender, address, 
                           profession, phone_number, email, occupation
             """);
                  PreparedStatement psReferees = conn.prepareStatement("""
                 INSERT INTO member_referees (member_id, referee_id)
-                VALUES (?::uuid, ?::uuid)
+                VALUES (?, ?)
                 ON CONFLICT (member_id, referee_id) DO NOTHING
             """);
                  PreparedStatement psCheckMemberExists = conn.prepareStatement("""
                 SELECT id, first_name, last_name, birth_date, gender, address, 
                        profession, phone_number, email, occupation
-                FROM members WHERE id = ?::uuid
+                FROM members WHERE id = ?
             """);
                  PreparedStatement psCheckCollectivityExists = conn.prepareStatement("""
-                SELECT id FROM collectivities WHERE id = ?::uuid
+                SELECT id FROM collectivities WHERE id = ?
             """)) {
 
                 for (CreateMemberDTO memberDTO : members) {
