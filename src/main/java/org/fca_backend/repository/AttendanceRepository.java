@@ -46,14 +46,12 @@ public class AttendanceRepository {
             try {
                 for (CreateActivityMemberAttendanceDto dto : dtos) {
 
-                    // Vérifier si attendance existe déjà
                     try (PreparedStatement check = conn.prepareStatement(checkSql)) {
                         check.setString(1, activityId);
                         check.setString(2, dto.getMemberIdentifier());
                         try (ResultSet rs = check.executeQuery()) {
                             if (rs.next()) {
                                 String existingStatus = rs.getString("attendance_status");
-                                // MISSING ou ATTENDED ne peuvent pas être modifiés
                                 if (!existingStatus.equals("UNDEFINED")) {
                                     throw new BadRequestException(
                                             "Either malformed provided data through request body or already confirmed attendance for any of provided member");
@@ -94,8 +92,6 @@ public class AttendanceRepository {
     }
 
     public List<ActivityMemberAttendance> getAttendances(String collectivityId, String activityId) {
-        // 1. Membres concernés par l'activité (occupation matching) → UNDEFINED/MISSING
-        // 2. Membres ayant ATTENDED → inclus aussi
         String sql = """
                 SELECT ama.id, ama.attendance_status,
                        m.id as member_id, m.first_name, m.last_name, m.email, m.occupation

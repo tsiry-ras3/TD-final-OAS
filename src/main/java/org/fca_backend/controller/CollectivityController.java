@@ -9,6 +9,7 @@ import org.fca_backend.DTO.UpdateCollectivityDTO;
 import org.fca_backend.entity.ActivityMemberAttendance;
 import org.fca_backend.entity.Collectivity;
 import org.fca_backend.entity.CollectivityActivity;
+import org.fca_backend.entity.CollectivityOverall;
 import org.fca_backend.entity.FinancialAccount;
 import org.fca_backend.exception.BadRequestException;
 import org.fca_backend.service.AttendanceService;
@@ -105,6 +106,18 @@ public class CollectivityController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error retrieving statistics");
+        }
+    }
+
+      @GetMapping("/collectivities/statistics")
+    public ResponseEntity<?> getOverallStatistics(
+            @RequestParam LocalDate from,
+            @RequestParam LocalDate to) {
+        try {
+            List<CollectivityOverall> statistics = collectivityStatisticsService.getOverallStatistics(from, to);
+            return ResponseEntity.status(HttpStatus.OK).body(statistics);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error retrieving overall statistics");
         }
     }
 
